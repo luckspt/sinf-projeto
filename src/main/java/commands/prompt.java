@@ -36,7 +36,7 @@ public class prompt {
         return files;
     }
      
-
+    
 
     // method to count the number of files to encrypt
     // the number of files is the number of arguments - 4
@@ -46,8 +46,24 @@ public class prompt {
     }
 
 
-
+    // method to check if files are valid
+    // receives the list of files
+    // files have to be a string with the name of the file and the extension
+    public static Boolean checkFiles(String [] files) {
+        // use a for each to check if each file is valid
+        for (String file : files) {
+            if (file.matches("^[a-zA-Z0-9]+\\.[a-zA-Z0-9]+$")) {
+                return true;
+            } else {
+                System.out.println("Error: invalid files");
+                newCommand();
+            }
+        }
+        return false;
+    }
  
+
+
 
     public static void main(String[] args) {
 		
@@ -99,6 +115,9 @@ public class prompt {
                             // call method list files with the number of files to encrypt and the command array andsave the list of files in a string array
                             String [] files = listFiles(countFiles(commandArray), commandArray);
                             
+                            // call method to check if files are valid
+                            checkFiles(files);
+
                             if (commandArray[3].equals("-c")) {
                                 // call method to encrypt files that receives the list of files
                                 System.out.println("-c");
@@ -114,6 +133,8 @@ public class prompt {
                             else if (commandArray[3].equals("-g")) {
                                 // call method to get files that receives the list of files
                                 System.out.println("-g");
+                                // call method to check if files are valid
+                                
                             } else {
                                 // call error method
                                 error();
