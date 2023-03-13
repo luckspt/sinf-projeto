@@ -8,22 +8,42 @@ public class prompt {
     // method to split the command by spaces and return an array with the command
 
     // method to ask for a new command and receive it
-    public static String[] newCommand() {
-        System.out.print("Insert command: ");
-        try (Scanner read = new Scanner(System.in)) {
-            String command = read.nextLine();
-            // return command array with the command split by spaces
-            String [] commandArray = command.split(" ");
-            return commandArray;
+    // public static String[] newCommand() {
+    //     System.out.print("Insert command: ");
+    //     try (Scanner read = new Scanner(System.in)) {
+    //         String command = read.nextLine();
+    //         // return command array with the command split by spaces
+    //         String [] commandArray = command.split(" ");
+    //         return commandArray;
             
-        }
-    }
+    //     }
+    // }
     
     // error method to print error messages and call newCommand()
     public static void error() {
         System.out.println("Error: command not found");
         newCommand();
     }
+
+
+
+    
+    public static String[] newCommand() {
+        System.out.print("Insert command: ");
+        try (Scanner read = new Scanner(System.in)) {    
+            String command = read.nextLine();
+            // return command array with the command split by spaces
+            String [] commandArray = command.split(" ");
+            return commandArray;
+        } catch (Exception e) {
+            System.out.println("Error: command not found");
+            newCommand();
+        }
+        return null;
+    }
+    
+
+
 
 
     // method to list files that return a list of files
@@ -77,7 +97,7 @@ public class prompt {
 
 
             // myCloud -a 127.0.0.1:23456 -e trab1.pdf aulas.doc
-
+            
             // myCloud -a <serverAddress> -c {<filenames>}+
             // o cliente cifra um ou mais ficheiros e envia-os para o servidor
 
