@@ -1,3 +1,4 @@
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -77,17 +78,21 @@ public class myCloud {
     			FileInputStream fis = null;
     			for (File file : files) {
 					outStream.writeObject(file.getName());
+					outStream.writeObject(file.length());
 					System.out.println(file.getName());
+					System.out.println(file.length());
 					fis = new FileInputStream(file);
+					BufferedInputStream bis = new BufferedInputStream(fis);
 					byte[] buf = new byte[1024];
 					int bytes;
-					while((bytes = fis.read(buf)) != -1) {
+					while((bytes = bis.read(buf,0,1024)) > 0 ) {
+						
 						outStream.write(buf,0,bytes);
 					}
-					
+					bis.close();
 				}
-    			Thread.sleep(2000);
-    			fis.close();
+    			//Thread.sleep(2000);
+    			//fis.close();
     			}
     		}
     	}

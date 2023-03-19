@@ -79,8 +79,9 @@ public class myCloudServer {
 				for(int i = 0; i < files; i++) {
 					System.out.println(i);
 					String utfFile = (String) inStream.readObject();
-					
+					Long length = (Long) inStream.readObject();
 					System.out.println(utfFile.toString());
+					System.out.println(length.intValue());
 					if(utfFile.contains(".cif")) {
 						nomeFile = utfFile + ".cifrado";
 					}else if(utfFile.contains(".key")) {
@@ -91,45 +92,54 @@ public class myCloudServer {
 					if(file1.exists()) {
 						
 						System.out.println("Ficheiro já existe");
-						long length = inStream.available();
-						inStream.skip(length);
+						int tamanho = inStream.available();
+						inStream.skip(tamanho);
 						
 					}else{
 						try {
 							fos = new FileOutputStream(nomeFile);
+							BufferedOutputStream bos = new BufferedOutputStream(fos);
+							
 					        byte[] buffer = new byte[1024];
 					        int bytes;
-					        while ((bytes = inStream.read(buffer)) != -1) {
-					        	System.out.println(bytes);
-					            fos.write(buffer, 0, bytes);
-					           
+					        int tempoDim = length.intValue();
+					        while (tempoDim > 0) {
+					        	if(tempoDim > 1024) {
+					        		bytes = inStream.read(buffer,0,1024);
+					        	}else {
+					        		bytes = inStream.read(buffer,0,tempoDim);
+					        	}
+					        	bos.write(buffer,0,bytes);
+					        	
+					           tempoDim -= bytes;
 					        }
-					        fos.close();
+					        bos.close();
+					        //fos.close();
 						}catch (IOException e) {
 						    // handle error
 							System.out.println("Entrou aqui");
 						    e.printStackTrace();
 						}finally {
 						    if (fos != null) {
-						        try {
+						        //try {
 						        	System.out.println("Entrou aqui 2");
-						            fos.close();
-						        } catch (IOException e) {
+						            //fos.close();
+						       // } catch (IOException e) {
 						            // handle error
-						            e.printStackTrace();
-						        }
+						           // e.printStackTrace();
+						        //}
 						    }
 						}
 						
 					}
 					
 				}
-				inStream.close();
+				//inStream.close();
 				
 		       
 				System.out.println("Acabou");
 				//inStream.close();
-				socket.close();
+				//socket.close();
 			
 			} catch (IOException e) {
 				e.printStackTrace();
