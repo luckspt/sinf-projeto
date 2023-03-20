@@ -69,7 +69,7 @@ public class myCloud {
     }
 
 
-    private static void cifraHibrida(String ficheiro) throws Exception {
+    /*private static void cifraHibrida(String ficheiro) throws Exception {
 		KeyGenerator kg = KeyGenerator.getInstance("AES");
         kg.init(128);
         SecretKey symmetrickey = kg.generateKey();
@@ -124,13 +124,74 @@ public class myCloud {
 	    	kos.write(wrappedKey);
 	    	kos.close();
 		}
-	}
+	}*/
 
 
 
  
-    private static void cryptCommand(Socket socket, String[] files) throws IOException {
-        
+   private static List<String> cryptCommand(Socket socket, String[] files) throws Exception {
+    	List<String> fileString = new ArrayList<>();
+    	for (String ficheiro : files) {
+    		KeyGenerator kg = KeyGenerator.getInstance("AES");
+            kg.init(128);
+            SecretKey symmetrickey = kg.generateKey();
+            
+            Cipher c = Cipher.getInstance("AES");
+            c.init(Cipher.ENCRYPT_MODE, symmetrickey);
+            
+            FileInputStream fis = new FileInputStream(ficheiro);
+            FileOutputStream fos = new FileOutputStream(ficheiro + ".cif");
+            CipherOutputStream cos = new CipherOutputStream(fos,c);
+            
+            FileOutputStream kos = null;
+            
+            byte[] buffer = new byte[1024];
+            int i;
+            
+            while((i = fis.read(buffer)) != -1) {
+            	cos.write(buffer, 0, i);
+            }
+            cos.close();
+            fos.close();
+            fis.close();
+            
+    		FileInputStream kfile = new FileInputStream("keystore.pedro");  //keystore
+    	    KeyStore kstore = KeyStore.getInstance("PKCS12");
+    	    kstore.load(kfile, "123456".toCharArray());           //password
+    	    
+    	    String alias = "pedro";
+    	    Key key1 = kstore.getKey(alias,"123456".toCharArray());
+    		
+    		
+    		if(key1 instanceof PrivateKey) {
+    	    	
+    	    	Certificate cert = kstore.getCertificate(alias);  //alias do utilizador
+    	    	
+    	        PublicKey publicKey = cert.getPublicKey();
+    	        
+    	        new KeyPair(publicKey,(PrivateKey)key1); 
+    	        
+    	        Cipher cRSA = Cipher.getInstance("RSA");
+    	        cRSA.init(Cipher.WRAP_MODE, publicKey);
+    	        
+    	        byte[] keyEncoded = symmetrickey.getEncoded();
+    	        FileOutputStream kos1 = new FileOutputStream(ficheiro + "Symmetric.key");
+    	        //byte[] keyEncoded = new byte[fis1.available()];
+    	        kos1.write(keyEncoded);
+    	        kos1.close();
+    	    
+    	    	SecretKey sk = new SecretKeySpec(keyEncoded, "AES");
+    	    	byte[] wrappedKey = cRSA.wrap(sk);
+    	    	kos = new FileOutputStream(ficheiro + ".key");
+    	    	kos.write(wrappedKey);
+    	    	kos.close();
+    		}
+    		
+    		fileString.add(ficheiro + ".cif");
+		    fileString.add(ficheiro + ".key");
+		}
+    	
+    	return fileString;
         // 1. criar chave hibrida (publica e privada)
         // 2. gravar chave privada como ficheiro.chave_secreta
         // 3. encriptar ficheiro e gravar como ficheiro.cifrado
@@ -235,50 +296,43 @@ public class myCloud {
                 case "-c":
                     // call method to encrypt files that receives the list of files
                     System.out.println("-c");
-                    // cryptCommand(socket, files);
                     ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
-                    List<String> fileString = new ArrayList<>();
-                    int x = 3;
-    				while(x < args.length) {
-	    		        
-                        
-	    		        cifraHibrida(args[x]);
-					    	
-				       
-				    	
-					    
-					    fileString.add(args[x] + ".cif");
-					    fileString.add(args[x] + ".key");
-					    
-					    x+=1;
-				    	
-    				}
-    			
-    			List<File> files = new ArrayList<>();
-    			for (String string : fileString) {
-    				File file = new File(string);
-					files.add(file);
-				}
-    			System.out.println(files.size());
-    			outStream.writeObject(files.size());
-    			FileInputStream fis = null;
-    			for (File file : files) {
-					outStream.writeObject(file.getName());
-					outStream.writeObject(file.length());
-					System.out.println(file.getName());
-					System.out.println(file.length());
-					fis = new FileInputStream(file);
-					BufferedInputStream bis = new BufferedInputStream(fis);
-					byte[] buf = new byte[1024];
-					int bytes;
-					while((bytes = bis.read(buf,0,1024)) > 0 ) {
-						
-						outStream.write(buf,0,bytes);
-					}
-					bis.close();
-				}
-    			//Thread.sleep(2000);
-    			//fis.close();
+                    try {
+	                    List<String> fileString = cryptCommand(socket, files);
+	                    
+	                    
+	                    List<File> ficheiros = new ArrayList<>();
+	                    for (String string : fileString) {
+	        				File file = new File(string);
+	    					ficheiros.add(file);
+	    				}
+	        			System.out.println(ficheiros.size());
+	        			outStream.writeObject(ficheiros.size());
+	        			FileInputStream fis = null;
+	        			for (File file : ficheiros) {
+	    					outStream.writeObject(file.getName());
+	    					outStream.writeObject(file.length());
+	    					System.out.println(file.getName());
+	    					System.out.println(file.length());
+	    					fis = new FileInputStream(file);
+	    					BufferedInputStream bis = new BufferedInputStream(fis);
+	    					byte[] buf = new byte[1024];
+	    					int bytes;
+	    					while((bytes = bis.read(buf,0,1024)) > 0 ) {
+	    						System.out.println(bytes);
+	    						outStream.write(buf,0,bytes);
+	    						
+	    					}
+	    					bis.close();
+	    				}
+	        			
+	        			deleteFiles(files);
+                    }finally {
+                    	outStream.close();
+                    }
+        			//Thread.sleep(2000);
+        			//fis.close();
+        			
                     break;
                 case "-s":
                     // call method to sign files that receives the list of files
