@@ -7,6 +7,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.nio.file.Files;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyPair;
@@ -29,8 +30,6 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.lang.Thread;
-import java.io.IOException;
-import java.net.Socket;
 import java.util.Arrays;
 
 public class myCloud {
@@ -67,69 +66,8 @@ public class myCloud {
         }
         return true;
     }
-
-
-    /*private static void cifraHibrida(String ficheiro) throws Exception {
-		KeyGenerator kg = KeyGenerator.getInstance("AES");
-        kg.init(128);
-        SecretKey symmetrickey = kg.generateKey();
-        
-        Cipher c = Cipher.getInstance("AES");
-        c.init(Cipher.ENCRYPT_MODE, symmetrickey);
-        
-        FileInputStream fis = new FileInputStream(ficheiro);
-        FileOutputStream fos = new FileOutputStream(ficheiro + ".cif");
-        CipherOutputStream cos = new CipherOutputStream(fos,c);
-        
-        FileOutputStream kos = null;
-        
-        byte[] buffer = new byte[1024];
-        int i;
-        
-        while((i = fis.read(buffer)) != -1) {
-        	cos.write(buffer, 0, i);
-        }
-        cos.close();
-        fos.close();
-        fis.close();
-        
-		FileInputStream kfile = new FileInputStream("keystore.pedro");  //keystore
-	    KeyStore kstore = KeyStore.getInstance("PKCS12");
-	    kstore.load(kfile, "123456".toCharArray());           //password
-	    
-	    String alias = "pedro";
-	    Key key1 = kstore.getKey(alias,"123456".toCharArray());
-		
-		
-		if(key1 instanceof PrivateKey) {
-	    	
-	    	Certificate cert = kstore.getCertificate(alias);  //alias do utilizador
-	    	
-	        PublicKey publicKey = cert.getPublicKey();
-	        
-	        new KeyPair(publicKey,(PrivateKey)key1); 
-	        
-	        Cipher cRSA = Cipher.getInstance("RSA");
-	        cRSA.init(Cipher.WRAP_MODE, publicKey);
-	        
-	        byte[] keyEncoded = symmetrickey.getEncoded();
-	        FileOutputStream kos1 = new FileOutputStream(ficheiro + "Symmetric.key");
-	        //byte[] keyEncoded = new byte[fis1.available()];
-	        kos1.write(keyEncoded);
-	        kos1.close();
-	    
-	    	SecretKey sk = new SecretKeySpec(keyEncoded, "AES");
-	    	byte[] wrappedKey = cRSA.wrap(sk);
-	    	kos = new FileOutputStream(ficheiro + ".key");
-	    	kos.write(wrappedKey);
-	    	kos.close();
-		}
-	}*/
-
-
-
  
-   private static List<String> cryptCommand(Socket socket, String[] files) throws Exception {
+    private static List<String> cryptCommand(Socket socket, String[] files) throws Exception {
     	List<String> fileString = new ArrayList<>();
     	for (String ficheiro : files) {
     		KeyGenerator kg = KeyGenerator.getInstance("AES");
@@ -186,7 +124,8 @@ public class myCloud {
     	    	kos.write(wrappedKey);
     	    	kos.close();
     		}
-    		
+    		File fileSym = new File(ficheiro +"Symmetric.key");
+    		fileSym.delete();
     		fileString.add(ficheiro + ".cif");
 		    fileString.add(ficheiro + ".key");
 		}
@@ -229,7 +168,11 @@ public class myCloud {
         */
     }
 
-
+    private static void apagaFiles(List<File> files) {
+    	for (File file : files) {
+			file.delete();
+		}
+    }
     public static void main(String[] args) throws Exception {
 	
 		// call newCommand() and save the command array in a variable
@@ -275,8 +218,12 @@ public class myCloud {
 
         // if third word is a valid string, check if the fourth word is -c or -s or -e or -g
         // call method list files with the number of files to encrypt and the command array andsave the list of files in a string array
-        String[] filesArray = Arrays.copyOfRange(args, 3, args.length);
-        if(!checkFiles(filesArray))
+        String[] files = Arrays.copyOfRange(args, 3, args.length);
+        for (String string : files) {
+        	System.out.println(string);
+		}
+       
+        if(!checkFiles(files))
             error("nome de ficheiro inválido");
 
 
@@ -325,14 +272,14 @@ public class myCloud {
 	    					}
 	    					bis.close();
 	    				}
-	        			
-	        			deleteFiles(files);
+	        			apagaFiles(ficheiros);
+	        			//deleteFiles(files);
                     }finally {
                     	outStream.close();
                     }
         			//Thread.sleep(2000);
         			//fis.close();
-        			
+                    
                     break;
                 case "-s":
                     // call method to sign files that receives the list of files
