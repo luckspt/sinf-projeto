@@ -87,9 +87,9 @@ public class myCloudServer {
 			System.out.println("thread do server para cada cliente");
 		}
 			
-		public void run(){
-			try {
-				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+		public void run() {
+    			try {
+    				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 				FileOutputStream fos = null;
 				String nomeFile = null;
 				int files = (int) inStream.readObject();
@@ -106,66 +106,63 @@ public class myCloudServer {
 						nomeFile = utfFile + ".chave_secreta";
 					}
 					File file1 = new File(nomeFile);
-					
+				
 					if(file1.exists()) {
-						
+
 						System.out.println("Ficheiro já existe");
 						int tamanho = inStream.available();
 						inStream.skip(tamanho);
-						
+
 					}else{
-						try {
-							fos = new FileOutputStream(nomeFile);
-							BufferedOutputStream bos = new BufferedOutputStream(fos);
-							
-					        byte[] buffer = new byte[1024];
-					        int bytes;
-					        int tempoDim = length.intValue();
-					        while (tempoDim > 0) {
-					        	if(tempoDim > 1024) {
-					        		bytes = inStream.read(buffer,0,1024);
-					        	}else {
-					        		bytes = inStream.read(buffer,0,tempoDim);
-					        	}
-					        	bos.write(buffer,0,bytes);
-					        	
-					           tempoDim -= bytes;
-					        }
-					        bos.close();
-					        //fos.close();
-						}catch (IOException e) {
-						    // handle error
-							System.out.println("Entrou aqui");
-						    e.printStackTrace();
-						}finally {
-						    if (fos != null) {
-						        //try {
-						        	System.out.println("Entrou aqui 2");
-						            //fos.close();
-						       // } catch (IOException e) {
-						            // handle error
-						           // e.printStackTrace();
-						        //}
-						    }
-						}
-						
-					}
+
+						fos = new FileOutputStream(nomeFile);
+						BufferedOutputStream bos = new BufferedOutputStream(fos);
 					
+					byte[] buffer = new byte[1024];
+					int bytes;
+					int tempoDim = length.intValue();
+					int size = inStream.available();
+					System.out.println(size);
+					while (tempoDim > 0) {
+						System.out.println("tempoDim:" + Integer.toString(tempoDim));
+						if(tempoDim > 1024) {
+							bytes = inStream.read(buffer,0,1024);
+							System.out.println("bytes1:" + Integer.toString(bytes));
+							bos.write(buffer,0,bytes);
+						}else {
+							bytes = inStream.read(buffer,0,tempoDim);
+							System.out.println("bytes2:" + Integer.toString(bytes));
+							bos.write(buffer,0,bytes);
+						}
+
+
+					    tempoDim -= bytes;
+
+					}
+					    bos.close();
+						//fos.close();
+					}
+
 				}
-				//inStream.close();
-				
-		       
+
+
+				inStream.close();
 				System.out.println("Acabou");
 				//inStream.close();
 				//socket.close();
-			
+		
 			} catch (IOException e) {
 				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		}
+		
+		
+	
+       		System.out.println("thread");
+ 
+    		}
 	}
 		//sSoc.close();
 }
