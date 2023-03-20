@@ -27,7 +27,25 @@ import javax.crypto.spec.SecretKeySpec;
 
 
 public class myCloudServer {
+
+	// port where the server will listen for connections
+	// is args[0]
+	private String port = null;
 	public static void main(String[] args) throws Exception{
+
+		// check if the number of arguments is correct
+		if (args.length != 1) {
+			System.out.println("Usage: java myCloudServer <port>");
+			System.exit(-1);
+		}
+		// check if the port is valid
+		String port = args[0];
+		if (!port.matches("^[0-9]+$")) {
+			System.out.println("Error: Invalid port");
+			System.exit(-1);
+		}
+
+
 		//Criação do servidor
 		System.out.println("servidor: main");
 		myCloudServer server = new myCloudServer();
@@ -39,9 +57,9 @@ public class myCloudServer {
 	public void startServer () throws Exception{
 		//Inicialização da socket
 		ServerSocket sSoc = null;
-        int portNumber = 5678;
+        
 		try {
-			sSoc = new ServerSocket(portNumber);
+			sSoc = new ServerSocket(Integer.valueOf(port));
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(-1);
