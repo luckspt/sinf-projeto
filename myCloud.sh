@@ -1,0 +1,1 @@
+mvn exec:java -Dexec.mainClass="pt.fcul.sinf.si003.client.myCloud" -Dexec.args="$*"

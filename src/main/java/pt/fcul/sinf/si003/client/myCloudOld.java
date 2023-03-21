@@ -1,4 +1,4 @@
-package client;
+package pt.fcul.sinf.si003.client;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -7,20 +7,15 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.security.Key;
-import java.security.KeyPair;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
 import java.util.Arrays;
 
-public class myCloud {
+public class myCloudOld {
     private static final String KEYSTORE_PASSWORD = "123456";
     private static final String KEYSTORE_ALIAS = "pedro";
 
@@ -64,8 +59,8 @@ public class myCloud {
  
     private static List<String> cryptCommand(Socket socket, String[] files) throws Exception {
     	List<String> fileString = new ArrayList<>();
-        Asymetric asymetric = new Asymetric();
-        Symetric symetric = new Symetric("AES", 128);
+        Asymetric asymetric = new Asymetric("RSA", 2048);
+        Symmetric symmetric = new Symmetric("AES", 128);
         ClientKeyStore clientKeyStore = new ClientKeyStore(String.format("keystore.%sCloud", KEYSTORE_ALIAS), KEYSTORE_PASSWORD, "PKCS12");
 
     	for (String ficheiro : files) {
@@ -74,8 +69,8 @@ public class myCloud {
             FileOutputStream fileOutputStream = new FileOutputStream(ficheiro + ".cif");
 
             // Generate the key and encrypt the file
-            SecretKey symetricKey = symetric.generateKey();
-            symetric.encrypt(symetricKey, fileInputStream, fileOutputStream);
+            SecretKey symetricKey = symmetric.generateKey();
+            symmetric.encrypt(symetricKey, fileInputStream, fileOutputStream);
 
             // Get the public key from the keystore
             Certificate cert = clientKeyStore.getCertificate(KEYSTORE_ALIAS);
@@ -86,21 +81,7 @@ public class myCloud {
 
 
 
-    		if(privateKey instanceof PrivateKey) {
-    	        new KeyPair(publicKey, (PrivateKey)privateKey);
-    	        
-    	        Cipher cRSA = Cipher.getInstance("RSA");
-    	        cRSA.init(Cipher.WRAP_MODE, publicKey);
-    	        
-    	        byte[] keyEncoded = symetricKey.getEncoded();
 
-    	    
-    	    	SecretKey sk = new SecretKeySpec(keyEncoded, "AES");
-    	    	byte[] wrappedKey = cRSA.wrap(sk);
-    	    	//kos = new FileOutputStream(ficheiro + ".key");
-                //kos.write(wrappedKey);
-    	    	//kos.close();
-    		}
     		File fileSym = new File(ficheiro +"Symmetric.key");
     		fileSym.delete();
     		fileString.add(ficheiro + ".cif");
@@ -161,20 +142,20 @@ public class myCloud {
         // identifica o servidor (hostname ou endereço IP e porto; por exemplo 127.0.0.1:23456)
 
 
-        // client.myCloud -a 127.0.0.1:23456 -e trab1.pdf aulas.doc
+        // pt.fcul.sinf.si003.client.myCloud -a 127.0.0.1:23456 -e trab1.pdf aulas.doc
         
-        // client.myCloud -a <serverAddress> -c {<filenames>}+
+        // pt.fcul.sinf.si003.client.myCloud -a <serverAddress> -c {<filenames>}+
         // o cliente cifra um ou mais ficheiros e envia-os para o servidor
 
 
-        // client.myCloud -a <serverAddress> -s {<filenames>}+
+        // pt.fcul.sinf.si003.client.myCloud -a <serverAddress> -s {<filenames>}+
         // o cliente assina um ou mais ficheiros e envia-os para o servidor
 
 
-        // client.myCloud -a <serverAddress> -e {<filenames>}+
+        // pt.fcul.sinf.si003.client.myCloud -a <serverAddress> -e {<filenames>}+
         // o cliente assina e cifra um ou mais ficheiros e envia-os para o servidor
 
-        // client.myCloud -a <serverAddress> -g {<filenames>}+
+        // pt.fcul.sinf.si003.client.myCloud -a <serverAddress> -g {<filenames>}+
         // o cliente recebe um ou mais ficheiros
 
         // first receive the command

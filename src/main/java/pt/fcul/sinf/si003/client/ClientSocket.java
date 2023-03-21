@@ -1,8 +1,10 @@
-package client;
+package pt.fcul.sinf.si003.client;
 
-import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
 public class ClientSocket {
     private final Socket socket;
@@ -13,13 +15,18 @@ public class ClientSocket {
         this.socket = new Socket(host, port);
     }
 
+    public void sendString(String string) {
+        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(string.getBytes(StandardCharsets.UTF_8));
+        this.sendStream(string.length(), byteArrayInputStream);
+    }
+
     /**
      * Send a buffer to the socket
      *
      * @param length      Length of the buffer
      * @param inputBuffer Buffer to send
      */
-    public void sendStream(int length, BufferedInputStream inputBuffer) {
+    public void sendStream(int length, InputStream inputBuffer) {
         try {
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[CHUNK_SIZE];
@@ -49,5 +56,9 @@ public class ClientSocket {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void close() throws IOException {
+        socket.close();
     }
 }
