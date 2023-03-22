@@ -15,7 +15,7 @@ public class ClientKeyStore {
     public ClientKeyStore(String alias, String keystorePassword, String aliasKeyPassword) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
         this.alias = alias;
         this.aliasKeyPassword = aliasKeyPassword;
-        File file = IO.openFile(String.format("keystore.%sCloud", alias));
+        File file = IO.openFile(String.format("keystore.%sCloud", alias), true);
         FileInputStream fileInputStream = new FileInputStream(file);
         this.keyStore = KeyStore.getInstance("PKCS12");
         this.keyStore.load(fileInputStream, keystorePassword.toCharArray());

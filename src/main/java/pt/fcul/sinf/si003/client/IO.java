@@ -52,9 +52,9 @@ public class IO {
         System.out.println(message);
     }
 
-    public static File openFile(String path) {
+    public static File openFile(String path, boolean errorIfNotExists) {
         File file = new File(path);
-        if (!file.exists())
+        if (errorIfNotExists && !file.exists())
             errorAndExit("File " + path + " does not exist on " + System.getProperty("user.dir"));
 
         return file;

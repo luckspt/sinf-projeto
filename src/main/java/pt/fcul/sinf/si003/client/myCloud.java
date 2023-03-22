@@ -63,10 +63,10 @@ public class myCloud {
 
         // Execute the method
         for (String fileName : fileNames) {
-            // Validate file existence locally
-            File file = IO.openFile(fileName);
+            // Validate file existence locally, only if it's not a download
+            File file = IO.openFile(fileName, !method.equals("g"));
 
-            // and not on the server
+            // and on the server
             boolean exists = fileExistsInServer(file);
             if (!exists && method.equals("g")) {
                 // -g requires the file to exist, so error if it doesn't exist
@@ -81,15 +81,19 @@ public class myCloud {
             switch (method) {
                 case "c":
                     // Hybrid encryption
+                    IO.printMessage("Performing hybrid encryption on file " + fileName + "...");
                     hybridEncryption(file);
                     break;
                 case "s":
+                    IO.printMessage("Signing file " + fileName + "...");
                     signFile(file);
                     break;
                 case "e":
+                    IO.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
                     // TODO: using hybrid encryption and sign file
                     break;
                 case "g":
+                    IO.printMessage("Downloading file " + fileName + "...");
                     downloadFile(file);
                     break;
                 default:
@@ -120,7 +124,7 @@ public class myCloud {
         clientSocket.sendString("upload " + file.getName() + ".cifrado");
         clientSocket.sendStream(byteArrayOutputStream.size(), new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
 
-        // Get te public key from the keystore
+        // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
         PublicKey publicKey = certificate.getPublicKey();
 
@@ -131,21 +135,36 @@ public class myCloud {
         // Send the wrapped key to the server
         clientSocket.sendString("upload " + file.getName() + ".chave_secreta");
         clientSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
+
+        // Close the streams
+        fileInputStream.close();
+        bufferedInputStream.close();
+        byteArrayOutputStream.close();
     }
 
     private static void signFile(File file) {
 
     }
 
-    private static void downloadFile(File file) {
+    /**
+     * Download the file from the server
+     * @param file The file to download
+     * @throws IOException If there is an error reading the file
+     */
+    private static void downloadFile(File file) throws IOException {
+        // Create the streams
+        FileOutputStream fileOutputStream = new FileOutputStream(file);
 
+        // Write the file to the output stream
+        clientSocket.receiveStream(fileOutputStream);
+
+        // Close the streams
+        fileOutputStream.close();
     }
 
     /**
      * Check if the file names are valid
-     *
      * @param fileNames File names to check
-     * @return True if the file names are valid, false otherwise
      */
     private static void validateFileNames(List<String> fileNames) {
         for (String fileName : fileNames) {
@@ -155,6 +174,11 @@ public class myCloud {
         }
     }
 
+    /**
+     * Check if the file exists in the server
+     * @param file The file to check
+     * @return True if the file exists in the server, false otherwise
+     */
     private static boolean fileExistsInServer(File file) {
         clientSocket.sendString("exists " + file.getName());
         // TODO receive response from server
