@@ -1,5 +1,8 @@
 package pt.fcul.sinf.si003.client;
 
+import pt.fcul.sinf.si003.CloudSocket;
+import pt.fcul.sinf.si003.IO;
+
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
@@ -15,8 +18,12 @@ import java.util.*;
  */
 public class myCloud {
 
-    private static ClientSocket clientSocket;
+    private static CloudSocket cloudSocket;
     private static ClientKeyStore clientKeyStore;
+    private static String baseDir = "./";
+    public static String getBaseDir() {
+        return baseDir;
+    }
 
     public static void main(String[] args) throws NoSuchAlgorithmException, IOException, CertificateException, KeyStoreException, UnrecoverableKeyException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException {
         // Check arguments
@@ -27,14 +34,18 @@ public class myCloud {
             IO.errorAndExit("Missing server address parameter (-a)");
 
         // Only allow one method (one of -c, -s, -e, -g), because they are mutually exclusive
-        int methods = 0;
+        String method = null;
         for (String key : arguments.keySet()) {
+            if (method != null)
+                IO.errorAndExit("There must be exactly one method (one of -c, -s, -e, -g)");
+
             if (key.equals("c") || key.equals("s") || key.equals("e") || key.equals("g"))
-                methods++;
+                method = key;
         }
 
-        if (methods != 1)
-            IO.errorAndExit("There must be exactly one method (one of -c, -s, -e, -g)");
+        // EXTRA: base directory
+        if (arguments.containsKey("baseDir"))
+            baseDir = arguments.get("baseDir").get(0);
 
         // EXTRA: keystore path, password, alias, and password
         String keyStoreAlias = arguments.get("ksAlias") != null ? arguments.get("ksAlias").get(0) : "jpp";
@@ -47,10 +58,6 @@ public class myCloud {
         if (serverAddress != null && !serverAddress.matches("^(localhost|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}):[0-9]{1,5}$"))
             IO.errorAndExit("Invalid server address. Must be in the format: localhost:port or ip:port");
 
-        // Get the other key (except "a")
-        String[] keys = Arrays.stream(arguments.keySet().toArray()).toArray(String[]::new);
-        String method = keys[0].equals("a") ? keys[1] : keys[0];
-
         // Validate file names and remove duplicates
         List<String> fileNames = new ArrayList<>(new HashSet<>(arguments.get(method)));
         validateFileNames(fileNames);
@@ -58,7 +65,7 @@ public class myCloud {
         // Connect to server
         String[] serverAddressSplit = serverAddress.split(":");
         try {
-            clientSocket = new ClientSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
+            cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
         } catch (IOException e) {
             IO.errorAndExit("Could not connect to server: " + e.getMessage());
         }
@@ -66,7 +73,7 @@ public class myCloud {
         // Execute the method
         for (String fileName : fileNames) {
             // Validate file existence locally, only if it's not a download
-            File file = IO.openFile(fileName, !method.equals("g"));
+            File file = IO.openFile(getBaseDir(), fileName, !method.equals("g"));
 
             // and on the server
             boolean exists = fileExistsInServer(file);
@@ -104,7 +111,7 @@ public class myCloud {
             }
         }
 
-        clientSocket.close();
+        cloudSocket.close();
     }
 
     /**
@@ -124,8 +131,8 @@ public class myCloud {
         symmetric.encrypt(symmetricKey, bufferedInputStream, byteArrayOutputStream);
 
         // Send the encrypted file to the server
-        clientSocket.sendString("upload " + file.getName() + ".cifrado");
-        clientSocket.sendStream(byteArrayOutputStream.size(), new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+        cloudSocket.sendString("upload " + file.getName() + ".cifrado");
+        cloudSocket.sendStream(byteArrayOutputStream.size(), new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
 
         // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
@@ -136,8 +143,8 @@ public class myCloud {
         byte[] wrappedKey = asymetric.wrapKey(symmetricKey, publicKey);
 
         // Send the wrapped key to the server
-        clientSocket.sendString("upload " + file.getName() + ".chave_secreta");
-        clientSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
+        cloudSocket.sendString("upload " + file.getName() + ".chave_secreta");
+        cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
 
         // Close the streams
         fileInputStream.close();
@@ -152,8 +159,8 @@ public class myCloud {
     private static void decipherHybridEncryption(File file, ByteArrayOutputStream fileStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         // Download wrapped key from the server
         ByteArrayOutputStream wrappedKeyOutputStream = new ByteArrayOutputStream();
-        clientSocket.sendString("download " + file.getName().replace(".cifrado$", ".chave_secreta"));
-        clientSocket.receiveStream(wrappedKeyOutputStream);
+        cloudSocket.sendString("download " + file.getName().replace(".cifrado$", ".chave_secreta"));
+        cloudSocket.receiveStream(wrappedKeyOutputStream);
 
         // Get the private key from the keystore
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
@@ -179,8 +186,8 @@ public class myCloud {
         ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
 
         // Download file to the output stream
-        clientSocket.sendString("download " + file.getName());
-        clientSocket.receiveStream(fileStream);
+        cloudSocket.sendString("download " + file.getName());
+        cloudSocket.receiveStream(fileStream);
 
         String extension = file.getName().substring(file.getName().lastIndexOf(".") + 1);
         switch (extension) {
@@ -214,7 +221,7 @@ public class myCloud {
      * @return True if the file exists in the server, false otherwise
      */
     private static boolean fileExistsInServer(File file) {
-        clientSocket.sendString("exists " + file.getName());
-        return clientSocket.receiveBool();
+        cloudSocket.sendString("exists " + file.getName());
+        return cloudSocket.receiveBool();
     }
 }

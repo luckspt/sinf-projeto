@@ -1,5 +1,7 @@
 package pt.fcul.sinf.si003.client;
 
+import pt.fcul.sinf.si003.IO;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -15,7 +17,7 @@ public class ClientKeyStore {
     public ClientKeyStore(String alias, String keystorePassword, String aliasKeyPassword) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
         this.alias = alias;
         this.aliasKeyPassword = aliasKeyPassword;
-        File file = IO.openFile(String.format("keystore.%sCloud", alias), true);
+        File file = IO.openFile(myCloud.getBaseDir(), String.format("keystore.%sCloud", alias), true);
         FileInputStream fileInputStream = new FileInputStream(file);
         this.keyStore = KeyStore.getInstance("PKCS12");
         this.keyStore.load(fileInputStream, keystorePassword.toCharArray());

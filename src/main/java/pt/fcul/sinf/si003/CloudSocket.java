@@ -1,15 +1,15 @@
-package pt.fcul.sinf.si003.client;
+package pt.fcul.sinf.si003;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
-public class ClientSocket {
+public class CloudSocket {
     private final Socket socket;
 
     private final int CHUNK_SIZE = 1024;
 
-    public ClientSocket(String host, int port) throws IOException {
+    public CloudSocket(String host, int port) throws IOException {
         this.socket = new Socket(host, port);
     }
 

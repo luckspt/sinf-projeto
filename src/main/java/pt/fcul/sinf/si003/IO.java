@@ -1,4 +1,4 @@
-package pt.fcul.sinf.si003.client;
+package pt.fcul.sinf.si003;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -54,10 +54,10 @@ public class IO {
         System.out.println(message);
     }
 
-    public static File openFile(String path, boolean errorIfNotExists) {
-        File file = new File(path);
+    public static File openFile(String baseDir, String path, boolean errorIfNotExists) {
+        File file = new File(baseDir, path);
         if (errorIfNotExists && !file.exists())
-            errorAndExit("File " + path + " does not exist on " + System.getProperty("user.dir"));
+            errorAndExit("File " + path + " does not exist (" + file.getAbsolutePath() + ")");
 
         return file;
     }
