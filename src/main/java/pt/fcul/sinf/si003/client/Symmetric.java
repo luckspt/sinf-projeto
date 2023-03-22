@@ -32,14 +32,14 @@ public class Symmetric {
     }
 
     public void decrypt(SecretKey key, InputStream inputStream, OutputStream outputStream) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        Cipher cipher = Cipher.getInstance("AES");
+        Cipher cipher = Cipher.getInstance(this.keyGen.getAlgorithm());
         cipher.init(Cipher.DECRYPT_MODE, key);
 
         try (inputStream; outputStream; CipherInputStream cipherInputStream = new CipherInputStream(inputStream, cipher)) {
             byte[] buffer = new byte[1024];
             int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                cipherInputStream.read(buffer, 0, bytesRead);
+            while((bytesRead = cipherInputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
             }
         } catch (IOException ioException) {
             // ioException.printStackTrace();

@@ -94,7 +94,7 @@ public class myCloud {
                     break;
                 case "g":
                     IO.printMessage("Downloading file " + fileName + "...");
-                    downloadFile(file);
+                    downloadAndDecipherFile(file);
                     break;
                 default:
                     IO.errorAndExit("Invalid method");
@@ -146,24 +146,54 @@ public class myCloud {
 
     }
 
+    private static void decipherHybridEncryption(File file, ByteArrayOutputStream fileStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+        // Download wrapped key from the server
+        ByteArrayOutputStream wrappedKeyOutputStream = new ByteArrayOutputStream();
+        clientSocket.sendString("download " + file.getName().replace(".cifrado$", ".chave_secreta"));
+        clientSocket.receiveStream(wrappedKeyOutputStream);
+
+        // Get the private key from the keystore
+        PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
+
+        // Unwrap the symmetric key with the private key
+        Asymetric asymetric = new Asymetric("RSA", 2048);
+        SecretKey symmetricKey = (SecretKey) asymetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
+
+        // Decrypt the file
+        Symmetric symmetric = new Symmetric("AES", 128);
+        // TODO: write file to disk or memory?
+        symmetric.decrypt(symmetricKey, new ByteArrayInputStream(fileStream.toByteArray()), new FileOutputStream(file));
+    }
+
     /**
-     * Download the file from the server
+     * Download the file from the server, decipher it, and validate the signature
+     *
      * @param file The file to download
      * @throws IOException If there is an error reading the file
      */
-    private static void downloadFile(File file) throws IOException {
+    private static void downloadAndDecipherFile(File file) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         // Create the streams
-        FileOutputStream fileOutputStream = new FileOutputStream(file);
+        ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
 
-        // Write the file to the output stream
-        clientSocket.receiveStream(fileOutputStream);
+        // Download file to the output stream
+        clientSocket.sendString("download " + file.getName());
+        clientSocket.receiveStream(fileStream);
 
-        // Close the streams
-        fileOutputStream.close();
+        String extension = file.getName().substring(file.getName().lastIndexOf(".") + 1);
+        switch (extension) {
+            // If the file is encrypted with hybrid encryption
+            case "cifrado":
+                decipherHybridEncryption(file, fileStream);
+                break;
+            case "assinado":
+                break;
+            case "seguro":
+        }
     }
 
     /**
      * Check if the file names are valid
+     *
      * @param fileNames File names to check
      */
     private static void validateFileNames(List<String> fileNames) {
@@ -176,6 +206,7 @@ public class myCloud {
 
     /**
      * Check if the file exists in the server
+     *
      * @param file The file to check
      * @return True if the file exists in the server, false otherwise
      */
