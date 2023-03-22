@@ -181,7 +181,6 @@ public class myCloud {
      */
     private static boolean fileExistsInServer(File file) {
         clientSocket.sendString("exists " + file.getName());
-        // TODO receive response from server
-        return false;
+        return clientSocket.receiveBool();
     }
 }

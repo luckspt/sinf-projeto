@@ -105,6 +105,10 @@ public class ClientSocket {
         }
     }
 
+    public boolean receiveBool() {
+        return this.receiveInt() == 1;
+    }
+
     /**
      * Receive a stream from the socket
      * @param outputBuffer Buffer to receive the stream
