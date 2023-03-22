@@ -1,1 +1,0 @@
-javac -classpath src/main/java src/main/java/client/myCloudlucas.java -d built/client

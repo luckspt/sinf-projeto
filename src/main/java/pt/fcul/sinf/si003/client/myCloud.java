@@ -66,9 +66,15 @@ public class myCloud {
             // Validate file existence locally
             File file = IO.openFile(fileName);
 
-            // and on the server
-            if (!fileExistsInServer(file)) {
+            // and not on the server
+            boolean exists = fileExistsInServer(file);
+            if (!exists && method.equals("g")) {
+                // -g requires the file to exist, so error if it doesn't exist
                 IO.error("File " + fileName + " does not exist in the server");
+                continue;
+            } else if (exists && !method.equals("g")) {
+                // all other methods require the file to not exist, so error if it exists
+                IO.error("File " + fileName + " already exists in the server");
                 continue;
             }
 
