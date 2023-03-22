@@ -14,10 +14,10 @@ public class ClientKeyStore {
     private final String alias;
     private final String aliasKeyPassword;
 
-    public ClientKeyStore(String alias, String keystorePassword, String aliasKeyPassword) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
+    public ClientKeyStore(String baseDir, String alias, String keystorePassword, String aliasKeyPassword) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
         this.alias = alias;
         this.aliasKeyPassword = aliasKeyPassword;
-        File file = IO.openFile(myCloud.getBaseDir(), String.format("keystore.%sCloud", alias), true);
+        File file = new IO("ClientKeyStore").openFile(baseDir, String.format("keystore.%sCloud", alias), true);
         FileInputStream fileInputStream = new FileInputStream(file);
         this.keyStore = KeyStore.getInstance("PKCS12");
         this.keyStore.load(fileInputStream, keystorePassword.toCharArray());

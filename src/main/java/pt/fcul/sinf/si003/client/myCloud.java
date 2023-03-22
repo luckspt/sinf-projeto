@@ -10,7 +10,10 @@ import java.io.*;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 
 /*
  * Para usar criar ficheiro keystore:
@@ -19,25 +22,27 @@ import java.util.*;
 public class myCloud {
 
     private static CloudSocket cloudSocket;
+    private static final IO io = new IO("Client");
     private static ClientKeyStore clientKeyStore;
     private static String baseDir = "./";
+
     public static String getBaseDir() {
         return baseDir;
     }
 
     public static void main(String[] args) throws NoSuchAlgorithmException, IOException, CertificateException, KeyStoreException, UnrecoverableKeyException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException {
         // Check arguments
-        Map<String, List<String>> arguments = IO.parseArguments(args);
+        Map<String, List<String>> arguments = io.parseArguments(args);
 
         // Required arguments
         if (!arguments.containsKey("a"))
-            IO.errorAndExit("Missing server address parameter (-a)");
+            io.errorAndExit("Missing server address parameter (-a)");
 
         // Only allow one method (one of -c, -s, -e, -g), because they are mutually exclusive
         String method = null;
         for (String key : arguments.keySet()) {
             if (method != null)
-                IO.errorAndExit("There must be exactly one method (one of -c, -s, -e, -g)");
+                io.errorAndExit("There must be exactly one method (one of -c, -s, -e, -g)");
 
             if (key.equals("c") || key.equals("s") || key.equals("e") || key.equals("g"))
                 method = key;
@@ -51,12 +56,12 @@ public class myCloud {
         String keyStoreAlias = arguments.get("ksAlias") != null ? arguments.get("ksAlias").get(0) : "jpp";
         String keyStorePassword = arguments.get("ksPassword") != null ? arguments.get("ksPassword").get(0) : "123456";
         String keyStoreAliasPassword = arguments.get("ksAliasPassword") != null ? arguments.get("ksAliasPassword").get(0) : "123456";
-        clientKeyStore = new ClientKeyStore(keyStoreAlias, keyStorePassword, keyStoreAliasPassword);
+        clientKeyStore = new ClientKeyStore(getBaseDir(), keyStoreAlias, keyStorePassword, keyStoreAliasPassword);
 
         // Validate server address and port
         String serverAddress = arguments.get("a").get(0);
         if (serverAddress != null && !serverAddress.matches("^(localhost|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}):[0-9]{1,5}$"))
-            IO.errorAndExit("Invalid server address. Must be in the format: localhost:port or ip:port");
+            io.errorAndExit("Invalid server address. Must be in the format: localhost:port or ip:port");
 
         // Validate file names and remove duplicates
         List<String> fileNames = new ArrayList<>(new HashSet<>(arguments.get(method)));
@@ -67,47 +72,47 @@ public class myCloud {
         try {
             cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
         } catch (IOException e) {
-            IO.errorAndExit("Could not connect to server: " + e.getMessage());
+            io.errorAndExit("Could not connect to server: " + e.getMessage());
         }
 
         // Execute the method
         for (String fileName : fileNames) {
             // Validate file existence locally, only if it's not a download
-            File file = IO.openFile(getBaseDir(), fileName, !method.equals("g"));
+            File file = io.openFile(getBaseDir(), fileName, !method.equals("g"));
 
             // and on the server
             boolean exists = fileExistsInServer(file);
             System.out.println("exists: " + exists);
             if (!exists && method.equals("g")) {
                 // -g requires the file to exist, so error if it doesn't exist
-                IO.error("File " + fileName + " does not exist in the server");
+                io.error("File " + fileName + " does not exist in the server");
                 continue;
             } else if (exists && !method.equals("g")) {
                 // all other methods require the file to not exist, so error if it exists
-                IO.error("File " + fileName + " already exists in the server");
+                io.error("File " + fileName + " already exists in the server");
                 continue;
             }
 
             switch (method) {
                 case "c":
                     // Hybrid encryption
-                    IO.printMessage("Performing hybrid encryption on file " + fileName + "...");
+                    io.printMessage("Performing hybrid encryption on file " + fileName + "...");
                     hybridEncryption(file);
                     break;
                 case "s":
-                    IO.printMessage("Signing file " + fileName + "...");
+                    io.printMessage("Signing file " + fileName + "...");
                     signFile(file);
                     break;
                 case "e":
-                    IO.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
+                    io.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
                     // TODO: using hybrid encryption and sign file
                     break;
                 case "g":
-                    IO.printMessage("Downloading file " + fileName + "...");
+                    io.printMessage("Downloading file " + fileName + "...");
                     downloadAndDecipherFile(file);
                     break;
                 default:
-                    IO.errorAndExit("Invalid method");
+                    io.errorAndExit("Invalid method");
             }
         }
 
@@ -209,7 +214,7 @@ public class myCloud {
     private static void validateFileNames(List<String> fileNames) {
         for (String fileName : fileNames) {
             if (!fileName.matches("^[^<>:;,?\"*|/]+$")) {
-                IO.errorAndExit("Invalid file name: " + fileName);
+                io.errorAndExit("Invalid file name: " + fileName);
             }
         }
     }

@@ -10,7 +10,11 @@ public class CloudSocket {
     private final int CHUNK_SIZE = 1024;
 
     public CloudSocket(String host, int port) throws IOException {
-        this.socket = new Socket(host, port);
+        this(new Socket(host, port));
+    }
+
+    public CloudSocket(Socket socket) {
+        this.socket = socket;
     }
 
     /**
@@ -152,5 +156,9 @@ public class CloudSocket {
             e.printStackTrace();
             return -1;
         }
+    }
+
+    public String getRemoteAddress() {
+        return socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
     }
 }
