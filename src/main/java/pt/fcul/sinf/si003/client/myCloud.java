@@ -2,6 +2,8 @@ package pt.fcul.sinf.si003.client;
 
 import pt.fcul.sinf.si003.CloudSocket;
 import pt.fcul.sinf.si003.IO;
+import pt.fcul.sinf.si003.client.ClientKeyStore;
+import pt.fcul.sinf.si003.client.Sign;
 
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -25,6 +27,7 @@ public class myCloud {
     private static final IO io = new IO("Client");
     private static ClientKeyStore clientKeyStore;
     private static String baseDir = "./";
+    private static Sign sign;
 
     public static String getBaseDir() {
         return baseDir;
@@ -163,6 +166,49 @@ public class myCloud {
 
     private static void signFile(File file) {
 
+        // Create the streams
+        FileInputStream fileInputStream = new FileInputStream(file);
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+
+
+        // Get private key from keystore
+        FileInputStream kFile = new FileInputStream("keystore.jppCloud");
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        keyStore.load(kFile, "123456".toCharArray());
+
+
+                // Create the signature and initialize with the private key
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        
+        PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
+
+        
+
+        // Sign file
+        FileInputStream fis = new FileInputStream(file);
+        Sign sign = new Sign();
+
+        sign.sign(fis, privateKey);
+  
+        // Send the signed file to the server
+        cloudSocket.sendString("upload " + file.getName() + ".assinado");
+        cloudSocket.sendStream(byteArrayOutputStream.size(), new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+
+
+        // save signature in a new file
+        FileOutputStream assinaturaFile = new FileOutputStream(file.getName() + ".assinatura");
+        byte[] assinaturaBytes = assinatura.sign();
+        ass.write(assinaturaBytes);
+
+        // send the signature file to the server
+        cloudSocket.sendString("upload " + file.getName() + ".assinatura");
+        cloudSocket.sendStream(assinaturaBytes.length, new ByteArrayInputStream(assinaturaBytes));
+
+
+        assinaturaFile.close();
+
+
     }
 
     private static void decipherHybridEncryption(File file, InputStream fileInputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
@@ -258,4 +304,8 @@ public class myCloud {
         cloudSocket.sendString("exists " + file.getName());
         return cloudSocket.receiveBool();
     }
+
+
+
+   
 }

@@ -12,11 +12,24 @@ public class Sign {
     }
 
     public byte[] sign(byte[] data, PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        Signature signature = Signature.getInstance(algorithm);
-        signature.initSign(privateKey);
-        signature.update(data);
-        return signature.sign();
-    }
+        try {
+            Signature signature = Signature.getInstance(algorithm);
+            signature.initSign(privateKey);
+
+            byte[] b = new byte[1024];
+            int i = fis.read(b);
+            while (i != -1) {
+                signature.update(data);
+                i = fis.read(b);
+            }
+            return signature.sign();
+            
+        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
+            e.printStackTrace();
+            return null;
+        }
+        
+        }
 
     public boolean verify(byte[] data, byte[] signature, PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
         Signature signature1 = Signature.getInstance(algorithm);
