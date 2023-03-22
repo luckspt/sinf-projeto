@@ -149,8 +149,8 @@ public class myCloud {
         PublicKey publicKey = certificate.getPublicKey();
 
         // Wrap the symmetric key with the public key
-        Asymetric asymetric = new Asymetric("RSA", 2048);
-        byte[] wrappedKey = asymetric.wrapKey(symmetricKey, publicKey);
+        Asymmetric asymmetric = new Asymmetric("RSA", 2048);
+        byte[] wrappedKey = asymmetric.wrapKey(symmetricKey, publicKey);
 
         // Send the wrapped key to the server
         cloudSocket.sendString("upload " + file.getName() + ".chave_secreta");
@@ -176,8 +176,8 @@ public class myCloud {
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
 
         // Unwrap the symmetric key with the private key
-        Asymetric asymetric = new Asymetric("RSA", 2048);
-        SecretKey symmetricKey = (SecretKey) asymetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
+        Asymmetric asymmetric = new Asymmetric("RSA", 2048);
+        SecretKey symmetricKey = (SecretKey) asymmetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
 
         // Decrypt the file
         Symmetric symmetric = new Symmetric("AES", 128);

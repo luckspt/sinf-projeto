@@ -5,11 +5,11 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.security.*;
 
-public class Asymetric {
+public class Asymmetric {
     private final String algorithm;
     private final int keySize;
 
-    public Asymetric(String transformation, int keySize) {
+    public Asymmetric(String transformation, int keySize) {
         this.algorithm = transformation;
         this.keySize = keySize;
     }
