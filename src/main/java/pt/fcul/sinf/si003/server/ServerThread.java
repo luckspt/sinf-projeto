@@ -3,9 +3,7 @@ package pt.fcul.sinf.si003.server;
 import pt.fcul.sinf.si003.CloudSocket;
 import pt.fcul.sinf.si003.IO;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 
 public class ServerThread extends Thread {
     private final CloudSocket cloudSocket;
@@ -46,6 +44,12 @@ public class ServerThread extends Thread {
                         e.printStackTrace();
                     }
                     break;
+                case "download":
+                    try {
+                        downloadFile(file);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 default:
                     cloudSocket.sendString("Invalid command. Available commands: exists, delete, upload");
             }
@@ -58,6 +62,12 @@ public class ServerThread extends Thread {
 
     private void deleteFile(File file) {
         cloudSocket.sendBool(file.delete());
+    }
+
+    private void downloadFile(File file) throws FileNotFoundException {
+        FileInputStream fileInputStream = new FileInputStream(file);
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
+        cloudSocket.sendStream((int) file.length(), bufferedInputStream);
     }
 
     private void uploadFile(File file) throws IOException {

@@ -52,13 +52,13 @@ public class myCloud {
             io.errorAndExit("Missing method parameter (one of -c, -s, -e, -g)");
 
         // EXTRA: base directory
-        if (arguments.containsKey("baseDir"))
-            baseDir = arguments.get("baseDir").get(0);
+        if (arguments.containsKey("d"))
+            baseDir = arguments.get("d").get(0);
 
         // EXTRA: keystore path, password, alias, and password
-        String keyStoreAlias = arguments.get("ksAlias") != null ? arguments.get("ksAlias").get(0) : "jpp";
-        String keyStorePassword = arguments.get("ksPassword") != null ? arguments.get("ksPassword").get(0) : "123456";
-        String keyStoreAliasPassword = arguments.get("ksAliasPassword") != null ? arguments.get("ksAliasPassword").get(0) : "123456";
+        String keyStoreAlias = arguments.get("-keyStoreAlias") != null ? arguments.get("-keyStoreAlias").get(0) : "jpp";
+        String keyStorePassword = arguments.get("-keyStorePassword") != null ? arguments.get("-keyStorePassword").get(0) : "123456";
+        String keyStoreAliasPassword = arguments.get("-keyStoreAliasPassword") != null ? arguments.get("-keyStoreAliasPassword").get(0) : "123456";
         clientKeyStore = new ClientKeyStore(getBaseDir(), keyStoreAlias, keyStorePassword, keyStoreAliasPassword);
 
         // Validate server address and port
@@ -73,7 +73,7 @@ public class myCloud {
         // Connect to server
         String[] serverAddressSplit = serverAddress.split(":");
         try {
-            io.printMessage("Connecting to server  " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
+            io.printMessage("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
             cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
             io.printMessage("Connected to server " + cloudSocket.getRemoteAddress());
         } catch (IOException e) {
@@ -113,7 +113,6 @@ public class myCloud {
                     // TODO: using hybrid encryption and sign file
                     break;
                 case "g":
-                    io.printMessage("Downloading file " + fileName + "...");
                     downloadAndDecipherFile(file);
                     break;
                 default:
@@ -166,11 +165,26 @@ public class myCloud {
 
     }
 
-    private static void decipherHybridEncryption(File file, ByteArrayOutputStream fileStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+    private static void decipherHybridEncryption(File file, InputStream fileInputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         // Download wrapped key from the server
         ByteArrayOutputStream wrappedKeyOutputStream = new ByteArrayOutputStream();
-        cloudSocket.sendString("download " + file.getName().replace(".cifrado$", ".chave_secreta"));
+
+        String wrappedKeyFileName = file.getName().replace(".cifrado", ".chave_secreta");
+        io.printMessage("Downloading wrapped key " + wrappedKeyFileName + "...");
+
+        // Make sure the wrapped key exists
+        cloudSocket.sendString("exists " + wrappedKeyFileName);
+        if (!cloudSocket.receiveBool()) {
+            io.error("Wrapped key " + wrappedKeyFileName + " does not exist in the server");
+            return;
+        }
+
+        // Download the wrapped key
+        cloudSocket.sendString("download " + wrappedKeyFileName);
         cloudSocket.receiveStream(wrappedKeyOutputStream);
+
+        // Unwrap the symmetric key
+        io.printMessage("Wrapped key downloaded!\nUnwrapping symmetric key...");
 
         // Get the private key from the keystore
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
@@ -179,10 +193,12 @@ public class myCloud {
         Asymmetric asymmetric = new Asymmetric("RSA", 2048);
         SecretKey symmetricKey = (SecretKey) asymmetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
 
+        io.printMessage("Symmetric key unwrapped!\nDecrypting file...");
+
         // Decrypt the file
         Symmetric symmetric = new Symmetric("AES", 128);
         // TODO: write file to disk or memory?
-        symmetric.decrypt(symmetricKey, new ByteArrayInputStream(fileStream.toByteArray()), new FileOutputStream(file));
+        symmetric.decrypt(symmetricKey, fileInputStream, new FileOutputStream(file));
     }
 
     /**
@@ -196,18 +212,26 @@ public class myCloud {
         ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
 
         // Download file to the output stream
+        io.printMessage("Downloading file " + file.getName() + "...");
         cloudSocket.sendString("download " + file.getName());
         cloudSocket.receiveStream(fileStream);
+
+        io.printMessage("File " + file.getName() + " downloaded!");
 
         String extension = file.getName().substring(file.getName().lastIndexOf(".") + 1);
         switch (extension) {
             // If the file is encrypted with hybrid encryption
             case "cifrado":
-                decipherHybridEncryption(file, fileStream);
+                decipherHybridEncryption(file, new ByteArrayInputStream(fileStream.toByteArray()));
                 break;
+            // If the file is signed
             case "assinado":
                 break;
+            // If the file is encrypted with hybrid encryption and signed
             case "seguro":
+                break;
+            default:
+                io.errorAndExit("Invalid file extension");
         }
     }
 

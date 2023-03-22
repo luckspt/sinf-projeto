@@ -76,6 +76,7 @@ public class CloudSocket {
         try {
             // Send the length of the file
             this.sendInt(length);
+            new IO("SEND STREAM").error("length " + length);
 
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[CHUNK_SIZE];
@@ -132,7 +133,6 @@ public class CloudSocket {
         try {
             return getIn().readInt();
         } catch (IOException e) {
-            e.printStackTrace();
             return -1;
         }
     }
@@ -141,7 +141,6 @@ public class CloudSocket {
         try {
             return getIn().readBoolean();
         } catch (IOException e) {
-            e.printStackTrace();
             return false;
         }
     }
@@ -155,6 +154,7 @@ public class CloudSocket {
         try {
             // Length of the file
             int length = this.receiveInt();
+            new IO("RECEIVE STREAM").error("length " + length);
 
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[CHUNK_SIZE];
