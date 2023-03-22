@@ -9,6 +9,12 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.*;
 
+
+/*
+ * Para usar criar ficheiro keystore:
+ * keytool -genkeypair -keysize 2048 -alias jppCloud -keyalg rsa -keystore keystore.jppCloud -storetype PKCS12
+ */
+
 public class myCloud {
     private static final String KEYSTORE_PASSWORD = "123456";
     private static final String KEYSTORE_ALIAS = "pedro";
@@ -68,6 +74,7 @@ public class myCloud {
 
             // and on the server
             boolean exists = fileExistsInServer(file);
+            System.out.println("exists: " + exists);
             if (!exists && method.equals("g")) {
                 // -g requires the file to exist, so error if it doesn't exist
                 IO.error("File " + fileName + " does not exist in the server");

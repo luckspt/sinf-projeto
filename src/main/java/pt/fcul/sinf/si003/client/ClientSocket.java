@@ -93,7 +93,7 @@ public class ClientSocket {
     public String receiveString() {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         this.receiveStream(byteArrayOutputStream);
-        return byteArrayOutputStream.toString(StandardCharsets.UTF_8);
+        return byteArrayOutputStream.toString();//StandardCharsets.UTF_8);
     }
 
     public int receiveInt() {

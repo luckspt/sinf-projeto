@@ -20,12 +20,14 @@ public class Symmetric {
         Cipher cipher = Cipher.getInstance(this.keyGen.getAlgorithm());
         cipher.init(Cipher.ENCRYPT_MODE, key);
 
-        try (inputStream; outputStream; CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher)) {
+        try {
+            CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, cipher);
             byte[] buffer = new byte[1024];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 cipherOutputStream.write(buffer, 0, bytesRead);
             }
+            cipherOutputStream.close();
         } catch (IOException ioException) {
             // ioException.printStackTrace();
         }
@@ -35,12 +37,14 @@ public class Symmetric {
         Cipher cipher = Cipher.getInstance("AES");
         cipher.init(Cipher.DECRYPT_MODE, key);
 
-        try (inputStream; outputStream; CipherInputStream cipherInputStream = new CipherInputStream(inputStream, cipher)) {
+        try {
+            CipherInputStream cipherInputStream = new CipherInputStream(inputStream, cipher);
             byte[] buffer = new byte[1024];
             int bytesRead;
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 cipherInputStream.read(buffer, 0, bytesRead);
             }
+            cipherInputStream.close();
         } catch (IOException ioException) {
             // ioException.printStackTrace();
         }
