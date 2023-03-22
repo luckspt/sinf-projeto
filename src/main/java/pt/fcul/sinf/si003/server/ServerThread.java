@@ -20,18 +20,16 @@ public class ServerThread extends Thread {
         while (true) {
             String command = cloudSocket.receiveString();
             // Check if connection was closed
-            if (command.isEmpty()) {
+            if (command == null || command.isEmpty()) {
                 io.printMessage(cloudSocket.getRemoteAddress() + " disconnected");
                 break;
             }
-
-            io.printMessage("Received command: " + command);
 
             String commandName = command.split(" ")[0];
             String fileName = command.split(" ")[1];
             File file = io.openFile(myCloudServer.getBaseDir(), fileName, false);
 
-            io.printMessage("\tFile: " + file.getAbsolutePath() + "\n\tExists: " + file.exists());
+            io.printMessage("New request:\n---- Command: " + commandName + "\n---- File   : " + file.getAbsolutePath() + "\n---- Exists : " + file.exists());
 
             switch (commandName) {
                 case "exists":

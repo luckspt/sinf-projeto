@@ -2,18 +2,31 @@ package pt.fcul.sinf.si003;
 
 import java.io.*;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 
 public class CloudSocket {
     private final Socket socket;
-
     private final int CHUNK_SIZE = 1024;
+
+    private ObjectInputStream in;
+    private ObjectOutputStream out;
+
+    private ObjectInputStream getIn() throws IOException {
+        if (in == null)
+            in = new ObjectInputStream(socket.getInputStream());
+        return in;
+    }
+
+    private ObjectOutputStream getOut() throws IOException {
+        if (out == null)
+            out = new ObjectOutputStream(socket.getOutputStream());
+        return out;
+    }
 
     public CloudSocket(String host, int port) throws IOException {
         this(new Socket(host, port));
     }
 
-    public CloudSocket(Socket socket) {
+    public CloudSocket(Socket socket) throws IOException {
         this.socket = socket;
     }
 
@@ -23,24 +36,34 @@ public class CloudSocket {
      * @param string String to send
      */
     public void sendString(String string) {
-        ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(string.getBytes(StandardCharsets.UTF_8));
-        this.sendStream(string.length(), byteArrayInputStream);
+        try {
+            getOut().writeObject(string);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * Send an int to the socket
+     *
      * @param value Int to send
      */
     public void sendInt(int value) {
         try {
-            socket.getOutputStream().write(value);
+            getOut().writeInt(value);
+            getOut().flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void sendBool(boolean bool) {
-        this.sendInt(bool ? 1 : 0);
+        try {
+            getOut().writeBoolean(bool);
+            getOut().flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -51,10 +74,13 @@ public class CloudSocket {
      */
     public void sendStream(int length, InputStream inputBuffer) {
         try {
+            // Send the length of the file
+            this.sendInt(length);
+
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[CHUNK_SIZE];
 
-            // Send the file in chunks of chunkSize bytes, until the end
+            // Send the file in chunks of CHUNK_SIZE bytes, until the end
             do {
                 // Read chunkSize bytes from the file
                 int bytesRead = inputBuffer.read(buffer, 0, CHUNK_SIZE);
@@ -66,7 +92,7 @@ public class CloudSocket {
                 // Send the chunk and update the length to be sent
                 this.sendBytes(buffer, bytesRead);
                 length -= bytesRead;
-            } while (length > 0);
+            } while (true);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -80,8 +106,8 @@ public class CloudSocket {
      */
     public void sendBytes(byte[] bytes, int length) {
         try {
-            this.sendInt(length);
-            socket.getOutputStream().write(bytes, 0, length);
+            getOut().write(bytes, 0, length);
+            getOut().flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -95,14 +121,16 @@ public class CloudSocket {
     }
 
     public String receiveString() {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        this.receiveStream(byteArrayOutputStream);
-        return byteArrayOutputStream.toString();//StandardCharsets.UTF_8);
+        try {
+            return (String) getIn().readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            return null;
+        }
     }
 
     public int receiveInt() {
         try {
-            return socket.getInputStream().read();
+            return getIn().readInt();
         } catch (IOException e) {
             e.printStackTrace();
             return -1;
@@ -110,11 +138,17 @@ public class CloudSocket {
     }
 
     public boolean receiveBool() {
-        return this.receiveInt() == 1;
+        try {
+            return getIn().readBoolean();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
      * Receive a stream from the socket
+     *
      * @param outputBuffer Buffer to receive the stream
      */
     public void receiveStream(OutputStream outputBuffer) {
@@ -129,6 +163,7 @@ public class CloudSocket {
             do {
                 // Read chunkSize bytes from the socket
                 int bytesRead = this.receiveBytes(buffer, CHUNK_SIZE);
+
                 // EOF
                 if (bytesRead == -1) {
                     break;
@@ -145,13 +180,14 @@ public class CloudSocket {
 
     /**
      * Receive a byte array from the socket
-     * @param bytes Byte array to receive the stream
+     *
+     * @param bytes  Byte array to receive the stream
      * @param length Length of the byte array
      * @return Number of bytes received
      */
     public int receiveBytes(byte[] bytes, int length) {
         try {
-            return socket.getInputStream().read(bytes, 0, length);
+            return getIn().read(bytes, 0, length);
         } catch (IOException e) {
             e.printStackTrace();
             return -1;

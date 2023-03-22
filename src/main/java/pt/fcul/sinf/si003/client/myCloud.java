@@ -48,6 +48,9 @@ public class myCloud {
                 method = key;
         }
 
+        if (method == null)
+            io.errorAndExit("Missing method parameter (one of -c, -s, -e, -g)");
+
         // EXTRA: base directory
         if (arguments.containsKey("baseDir"))
             baseDir = arguments.get("baseDir").get(0);
@@ -70,7 +73,9 @@ public class myCloud {
         // Connect to server
         String[] serverAddressSplit = serverAddress.split(":");
         try {
+            io.printMessage("Connecting to server  " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
             cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
+            io.printMessage("Connected to server " + cloudSocket.getRemoteAddress());
         } catch (IOException e) {
             io.errorAndExit("Could not connect to server: " + e.getMessage());
         }
@@ -81,8 +86,8 @@ public class myCloud {
             File file = io.openFile(getBaseDir(), fileName, !method.equals("g"));
 
             // and on the server
+            // TODO: FIX! this does NOT include the added extensions (.cifrado, .assinado)
             boolean exists = fileExistsInServer(file);
-            System.out.println("exists: " + exists);
             if (!exists && method.equals("g")) {
                 // -g requires the file to exist, so error if it doesn't exist
                 io.error("File " + fileName + " does not exist in the server");
@@ -127,17 +132,17 @@ public class myCloud {
     private static void hybridEncryption(File file) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
-        BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        BufferedInputStream bufferedFileStream = new BufferedInputStream(fileInputStream);
+        ByteArrayOutputStream encryptedFile = new ByteArrayOutputStream();
 
         // Generate the key and encrypt the file
         Symmetric symmetric = new Symmetric("AES", 128);
         SecretKey symmetricKey = symmetric.generateKey();
-        symmetric.encrypt(symmetricKey, bufferedInputStream, byteArrayOutputStream);
+        symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFile);
 
         // Send the encrypted file to the server
         cloudSocket.sendString("upload " + file.getName() + ".cifrado");
-        cloudSocket.sendStream(byteArrayOutputStream.size(), new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+        cloudSocket.sendStream(encryptedFile.size(), new ByteArrayInputStream(encryptedFile.toByteArray()));
 
         // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
@@ -153,8 +158,8 @@ public class myCloud {
 
         // Close the streams
         fileInputStream.close();
-        bufferedInputStream.close();
-        byteArrayOutputStream.close();
+        bufferedFileStream.close();
+        encryptedFile.close();
     }
 
     private static void signFile(File file) {
