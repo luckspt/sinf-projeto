@@ -9,15 +9,11 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.util.*;
 
-
 /*
  * Para usar criar ficheiro keystore:
  * keytool -genkeypair -keysize 2048 -alias jppCloud -keyalg rsa -keystore keystore.jppCloud -storetype PKCS12
  */
-
 public class myCloud {
-    private static final String KEYSTORE_PASSWORD = "123456";
-    private static final String KEYSTORE_ALIAS = "pedro";
 
     private static ClientSocket clientSocket;
     private static ClientKeyStore clientKeyStore;

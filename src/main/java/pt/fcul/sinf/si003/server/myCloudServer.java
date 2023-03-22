@@ -1,23 +1,12 @@
 package pt.fcul.sinf.si003.server;
 
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.io.EOFException;
 
 public class myCloudServer extends Thread {
 
-	private final int CHUNK_SIZE = 1024;
+    private final int CHUNK_SIZE = 1024;
 
     public static void main(String[] args) {
 
@@ -35,25 +24,24 @@ public class myCloudServer extends Thread {
         }
 
         ServerSocket sSoc = null;
-		try {
-			sSoc = new ServerSocket(Integer.valueOf(port));
-		} catch (IOException e) {
-			System.err.println(e.getMessage());
-			System.exit(-1);
-		}
-         
-		while(true) {
-			try {
+        try {
+            sSoc = new ServerSocket(Integer.valueOf(port));
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+            System.exit(-1);
+        }
+
+        while (true) {
+            try {
                 System.out.println("esperando ligacao");
-				Socket inSoc = sSoc.accept();
-				myCloudServer newServerThread = new myCloudServer(inSoc);
-				newServerThread.start();
-		    }
-		    catch (IOException e) {
-		        e.printStackTrace();
-		    }   
-		}
-		//sSoc.close();
+                Socket inSoc = sSoc.accept();
+                myCloudServer newServerThread = new myCloudServer(inSoc);
+                newServerThread.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        //sSoc.close();
     }
 
     private Socket socket = null;
@@ -64,12 +52,12 @@ public class myCloudServer extends Thread {
     }
 
     public void run() {
-		try {
-			receiveCommand();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+        try {
+            receiveCommand();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 		/*
     	try {
     		ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
@@ -145,72 +133,72 @@ public class myCloudServer extends Thread {
 	
         System.out.println("thread");
 		*/
- 
+
     }
 
 
-	// mehod that receives clientSocket.sendString from the client
-	
-	public void receiveCommand() throws IOException {
-		
-		// open the input stream from the client
+    // mehod that receives clientSocket.sendString from the client
 
-		// read the command from the client
-		// ObjectInputStream stream = new ObjectInputStream(socket.getInputStream());
-		System.out.println("receiveCommand");
-		InputStream stream = socket.getInputStream();
-		System.out.println("read UTF");
-		String message = receiveString();
-		System.out.println("message: " + message);
-		
+    public void receiveCommand() throws IOException {
 
-		// separate the message in command and file name
-		String command = message.split(" ")[0];
-		String fileName = message.split(" ")[1];
+        // open the input stream from the client
 
-				 
-		switch (command) {
-			case "exists":
-				boolean answer = exists(fileName);
-				
-				// open output stream to the client
-				// send "the file does not exist" to the client
-
-				System.out.println("answer: " + answer);
-				sendBool(answer);
-
-				break;
-			case "upload":
-				upload(stream, fileName);
-				break;
-				
-			}
+        // read the command from the client
+        // ObjectInputStream stream = new ObjectInputStream(socket.getInputStream());
+        System.out.println("receiveCommand");
+        InputStream stream = socket.getInputStream();
+        System.out.println("read UTF");
+        String message = receiveString();
+        System.out.println("message: " + message);
 
 
-	}
+        // separate the message in command and file name
+        String command = message.split(" ")[0];
+        String fileName = message.split(" ")[1];
 
-	
 
-	private boolean exists(String fileName) {
+        switch (command) {
+            case "exists":
+                boolean answer = exists(fileName);
 
-		File tmp = new File(fileName);
-		boolean exists = tmp.exists();
+                // open output stream to the client
+                // send "the file does not exist" to the client
 
-		return exists;
-	}
+                System.out.println("answer: " + answer);
+                sendBool(answer);
 
-	private void upload(InputStream stream, String fileName) throws IOException {
-		// open the output stream to the file
-		System.out.println("upload " + fileName);
-		FileOutputStream fos = new FileOutputStream(fileName);
-		receiveStream(fos);
-		fos.close();
-	}
+                break;
+            case "upload":
+                upload(stream, fileName);
+                break;
 
-	// same as ClientSocket
+        }
+
+
+    }
+
+
+    private boolean exists(String fileName) {
+
+        File tmp = new File(fileName);
+        boolean exists = tmp.exists();
+
+        return exists;
+    }
+
+    private void upload(InputStream stream, String fileName) throws IOException {
+        // open the output stream to the file
+        System.out.println("upload " + fileName);
+        FileOutputStream fos = new FileOutputStream(fileName);
+        receiveStream(fos);
+        fos.close();
+    }
+
+    // same as ClientSocket
 
     /**
      * Send an int to the socket
+     *
      * @param value Int to send
      */
     public void sendInt(int value) {
@@ -227,7 +215,8 @@ public class myCloudServer extends Thread {
 
     /**
      * Receive a byte array from the socket
-     * @param bytes Byte array to receive the stream
+     *
+     * @param bytes  Byte array to receive the stream
      * @param length Length of the byte array
      * @return Number of bytes received
      */
@@ -240,7 +229,7 @@ public class myCloudServer extends Thread {
         }
     }
 
-	public int receiveInt() {
+    public int receiveInt() {
         try {
             return socket.getInputStream().read();
         } catch (IOException e) {
@@ -255,6 +244,7 @@ public class myCloudServer extends Thread {
 
     /**
      * Receive a stream from the socket
+     *
      * @param outputBuffer Buffer to receive the stream
      */
     public void receiveStream(OutputStream outputBuffer) {
@@ -283,7 +273,7 @@ public class myCloudServer extends Thread {
         }
     }
 
-	public String receiveString() {
+    public String receiveString() {
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         this.receiveStream(byteArrayOutputStream);
         return byteArrayOutputStream.toString();//StandardCharsets.UTF_8);

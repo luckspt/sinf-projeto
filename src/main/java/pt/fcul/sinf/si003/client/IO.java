@@ -13,6 +13,7 @@ public class IO {
 
     /**
      * Error message
+     *
      * @param message Error message
      * @throws System.exit(-1) Exit with error
      */
@@ -25,6 +26,7 @@ public class IO {
 
     /**
      * Parse arguments
+     *
      * @param args The arguments to parse
      * @return A map with the arguments
      */

@@ -1,12 +1,15 @@
 package pt.fcul.sinf.si003.client;
 
 import javax.crypto.*;
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
 public class Symmetric {
     private final KeyGenerator keyGen;
+
     public Symmetric(String algorithm, int keySize) throws NoSuchAlgorithmException {
         this.keyGen = KeyGenerator.getInstance(algorithm);
         this.keyGen.init(keySize);
@@ -41,7 +44,7 @@ public class Symmetric {
             CipherInputStream cipherInputStream = new CipherInputStream(inputStream, cipher);
             byte[] buffer = new byte[1024];
             int bytesRead;
-            while((bytesRead = cipherInputStream.read(buffer)) != -1) {
+            while ((bytesRead = cipherInputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, bytesRead);
             }
             cipherInputStream.close();
