@@ -136,11 +136,13 @@ public class myCloud {
         ByteArrayOutputStream encryptedFile = new ByteArrayOutputStream();
 
         // Generate the key and encrypt the file
+        io.printMessage("Encrypting file with AES 128...");
         Symmetric symmetric = new Symmetric("AES", 128);
         SecretKey symmetricKey = symmetric.generateKey();
         symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFile);
 
         // Send the encrypted file to the server
+        io.printMessage("Sending encrypted file to server...");
         cloudSocket.sendString("upload " + file.getName() + ".cifrado");
         cloudSocket.sendStream(encryptedFile.size(), new ByteArrayInputStream(encryptedFile.toByteArray()));
 
@@ -149,10 +151,12 @@ public class myCloud {
         PublicKey publicKey = certificate.getPublicKey();
 
         // Wrap the symmetric key with the public key
+        io.printMessage("Wrapping symmetric key with public key...");
         Asymmetric asymmetric = new Asymmetric("RSA", 2048);
         byte[] wrappedKey = asymmetric.wrapKey(symmetricKey, publicKey);
 
         // Send the wrapped key to the server
+        io.printMessage("Sending wrapped key to server...");
         cloudSocket.sendString("upload " + file.getName() + ".chave_secreta");
         cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
 
@@ -167,19 +171,23 @@ public class myCloud {
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
 
-        // Send the signed file to the server
-        cloudSocket.sendString("upload " + file.getName() + ".assinado");
-        cloudSocket.sendStream((int) file.length(), bufferedInputStream);
-
         // Get private key from keystore
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
 
         // Sign file
+        io.printMessage("Signing file with SHA256withRSA...");
         Sign signature = new Sign("SHA256withRSA");
         byte[] signatureData = signature.sign(bufferedInputStream, privateKey);
 
+        // Send the signature to the server
+        io.printMessage("Sending signature to server...");
         cloudSocket.sendString("upload " + file.getName() + ".assinatura");
         cloudSocket.sendStream(signatureData.length, new ByteArrayInputStream(signatureData));
+
+        // Send the signed file to the server
+        io.printMessage("Sending signed file to server...");
+        cloudSocket.sendString("upload " + file.getName() + ".assinado");
+        cloudSocket.sendStream((int) file.length(), bufferedInputStream);
     }
 
     private static void decipherHybridEncryption(File file, InputStream fileInputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
@@ -201,7 +209,8 @@ public class myCloud {
         cloudSocket.receiveStream(wrappedKeyOutputStream);
 
         // Unwrap the symmetric key
-        io.printMessage("Wrapped key downloaded!\nUnwrapping symmetric key...");
+        io.printMessage("Wrapped key downloaded!");
+        io.printMessage("Unwrapping symmetric key with private key...");
 
         // Get the private key from the keystore
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
@@ -210,7 +219,8 @@ public class myCloud {
         Asymmetric asymmetric = new Asymmetric("RSA", 2048);
         SecretKey symmetricKey = (SecretKey) asymmetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
 
-        io.printMessage("Symmetric key unwrapped!\nDecrypting file...");
+        io.printMessage("Symmetric key unwrapped!");
+        io.printMessage("Decrypting file with AES 128...");
 
         // Decrypt the file
         Symmetric symmetric = new Symmetric("AES", 128);
@@ -243,6 +253,7 @@ public class myCloud {
                 break;
             // If the file is signed
             case "assinado":
+                // verifySignature(file)
                 break;
             // If the file is encrypted with hybrid encryption and signed
             case "seguro":

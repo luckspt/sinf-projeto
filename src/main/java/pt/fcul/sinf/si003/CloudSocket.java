@@ -38,6 +38,7 @@ public class CloudSocket {
     public void sendString(String string) {
         try {
             getOut().writeObject(string);
+            getOut().flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -76,7 +77,6 @@ public class CloudSocket {
         try {
             // Send the length of the file
             this.sendInt(length);
-            new IO("SEND STREAM").error("length " + length);
 
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[CHUNK_SIZE];
@@ -84,9 +84,9 @@ public class CloudSocket {
             // Send the file in chunks of CHUNK_SIZE bytes, until the end
             do {
                 // Read chunkSize bytes from the file
-                int bytesRead = inputBuffer.read(buffer, 0, CHUNK_SIZE);
+                int bytesRead = inputBuffer.read(buffer, 0, Math.min(CHUNK_SIZE, length));
                 // EOF
-                if (bytesRead == -1) {
+                if (bytesRead == 0) {
                     break;
                 }
 
@@ -141,6 +141,7 @@ public class CloudSocket {
         try {
             return getIn().readBoolean();
         } catch (IOException e) {
+            e.printStackTrace();
             return false;
         }
     }
@@ -154,7 +155,6 @@ public class CloudSocket {
         try {
             // Length of the file
             int length = this.receiveInt();
-            new IO("RECEIVE STREAM").error("length " + length);
 
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[CHUNK_SIZE];
@@ -162,7 +162,7 @@ public class CloudSocket {
             // Receive the file in chunks of chunkSize bytes, until the end
             do {
                 // Read chunkSize bytes from the socket
-                int bytesRead = this.receiveBytes(buffer, CHUNK_SIZE);
+                int bytesRead = this.receiveBytes(buffer, Math.min(CHUNK_SIZE, length));
 
                 // EOF
                 if (bytesRead == -1) {

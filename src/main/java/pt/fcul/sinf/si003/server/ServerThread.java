@@ -50,6 +50,7 @@ public class ServerThread extends Thread {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                    break;
                 default:
                     cloudSocket.sendString("Invalid command. Available commands: exists, delete, upload");
             }
