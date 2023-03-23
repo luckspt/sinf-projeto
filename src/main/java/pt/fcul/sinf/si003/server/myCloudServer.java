@@ -36,8 +36,8 @@ public class myCloudServer {
         }
 
         // EXTRA: base directory
-        if (arguments.containsKey("baseDir"))
-            baseDir = arguments.get("baseDir").get(0);
+        if (arguments.containsKey("d"))
+            baseDir = arguments.get("d").get(0);
 
         // Create server socket
         ServerSocket serverSocket = null;

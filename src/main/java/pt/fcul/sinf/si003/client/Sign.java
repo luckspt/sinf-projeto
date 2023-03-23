@@ -1,40 +1,50 @@
 package pt.fcul.sinf.si003.client;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.*;
 
 public class Sign {
     private final String algorithm;
-    private final int keySize;
 
-    public Sign(String algorithm, int keySize) {
+    public Sign(String algorithm) throws NoSuchAlgorithmException {
         this.algorithm = algorithm;
-        this.keySize = keySize;
     }
 
-    public byte[] sign(byte[] data, PrivateKey privateKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    public byte[] sign(InputStream inputStream, PrivateKey privateKey) throws SignatureException, InvalidKeyException, NoSuchAlgorithmException {
+        Signature signature = Signature.getInstance(algorithm);
+        signature.initSign(privateKey);
+
         try {
-            Signature signature = Signature.getInstance(algorithm);
-            signature.initSign(privateKey);
+            byte[] buffer = new byte[1024];
 
-            byte[] b = new byte[1024];
-            int i = fis.read(b);
-            while (i != -1) {
-                signature.update(data);
-                i = fis.read(b);
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                signature.update(buffer, 0, bytesRead);
             }
+
             return signature.sign();
-            
-        } catch (NoSuchAlgorithmException | InvalidKeyException | SignatureException e) {
-            e.printStackTrace();
-            return null;
-        }
-        
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
-    public boolean verify(byte[] data, byte[] signature, PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        Signature signature1 = Signature.getInstance(algorithm);
-        signature1.initVerify(publicKey);
-        signature1.update(data);
-        return signature1.verify(signature);
+    }
+
+    public boolean verify(byte[] data, InputStream signatureStream, PublicKey publicKey) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        Signature signature = Signature.getInstance(algorithm);
+        signature.initVerify(publicKey);
+
+        try {
+            byte[] buffer = new byte[1024];
+
+            int bytesRead;
+            while ((bytesRead = signatureStream.read(buffer)) != -1) {
+                signature.update(buffer, 0, bytesRead);
+            }
+
+            return signature.verify(data);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

@@ -2,8 +2,6 @@ package pt.fcul.sinf.si003.client;
 
 import pt.fcul.sinf.si003.CloudSocket;
 import pt.fcul.sinf.si003.IO;
-import pt.fcul.sinf.si003.client.ClientKeyStore;
-import pt.fcul.sinf.si003.client.Sign;
 
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -33,7 +31,7 @@ public class myCloud {
         return baseDir;
     }
 
-    public static void main(String[] args) throws NoSuchAlgorithmException, IOException, CertificateException, KeyStoreException, UnrecoverableKeyException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException {
+    public static void main(String[] args) throws NoSuchAlgorithmException, IOException, CertificateException, KeyStoreException, UnrecoverableKeyException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, SignatureException {
         // Check arguments
         Map<String, List<String>> arguments = io.parseArguments(args);
 
@@ -44,11 +42,11 @@ public class myCloud {
         // Only allow one method (one of -c, -s, -e, -g), because they are mutually exclusive
         String method = null;
         for (String key : arguments.keySet()) {
-            if (method != null)
-                io.errorAndExit("There must be exactly one method (one of -c, -s, -e, -g)");
-
-            if (key.equals("c") || key.equals("s") || key.equals("e") || key.equals("g"))
+            if (key.equals("c") || key.equals("s") || key.equals("e") || key.equals("g")) {
+                if (method != null)
+                    io.errorAndExit("There must be at most one method (one of -c, -s, -e, -g)");
                 method = key;
+            }
         }
 
         if (method == null)
@@ -164,51 +162,24 @@ public class myCloud {
         encryptedFile.close();
     }
 
-    private static void signFile(File file) {
-
+    private static void signFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException, SignatureException, InvalidKeyException {
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
-
-        // Get private key from keystore
-        FileInputStream kFile = new FileInputStream("keystore.jppCloud");
-        KeyStore keyStore = KeyStore.getInstance("PKCS12");
-        keyStore.load(kFile, "123456".toCharArray());
-
-
-                // Create the signature and initialize with the private key
-        Signature signature = Signature.getInstance("SHA256withRSA");
-        
-        PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
-
-        
-
-        // Sign file
-        FileInputStream fis = new FileInputStream(file);
-        Sign sign = new Sign();
-
-        sign.sign(fis, privateKey);
-  
         // Send the signed file to the server
         cloudSocket.sendString("upload " + file.getName() + ".assinado");
-        cloudSocket.sendStream(byteArrayOutputStream.size(), new ByteArrayInputStream(byteArrayOutputStream.toByteArray()));
+        cloudSocket.sendStream((int) file.length(), bufferedInputStream);
 
+        // Get private key from keystore
+        PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
 
-        // save signature in a new file
-        FileOutputStream assinaturaFile = new FileOutputStream(file.getName() + ".assinatura");
-        byte[] assinaturaBytes = assinatura.sign();
-        ass.write(assinaturaBytes);
+        // Sign file
+        Sign signature = new Sign("SHA256withRSA");
+        byte[] signatureData = signature.sign(bufferedInputStream, privateKey);
 
-        // send the signature file to the server
         cloudSocket.sendString("upload " + file.getName() + ".assinatura");
-        cloudSocket.sendStream(assinaturaBytes.length, new ByteArrayInputStream(assinaturaBytes));
-
-
-        assinaturaFile.close();
-
-
+        cloudSocket.sendStream(signatureData.length, new ByteArrayInputStream(signatureData));
     }
 
     private static void decipherHybridEncryption(File file, InputStream fileInputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
@@ -306,6 +277,4 @@ public class myCloud {
     }
 
 
-
-   
 }
