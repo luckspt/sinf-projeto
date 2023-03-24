@@ -130,21 +130,29 @@ public class myCloud {
      * @param file The file to encrypt
      */
     private static void hybridEncryption(File file) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
+        String cipheredFileName = file.getName() + ".cifrado";
+
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedFileStream = new BufferedInputStream(fileInputStream);
-        ByteArrayOutputStream encryptedFile = new ByteArrayOutputStream();
+        // encrypted file is a temporary file
+        File encryptedFile = new File(getBaseDir(), cipheredFileName);
+        FileOutputStream encryptedFileOutputBuffer = new FileOutputStream(encryptedFile);
 
         // Generate the key and encrypt the file
         io.printMessage("Encrypting file with AES 128...");
         Symmetric symmetric = new Symmetric("AES", 128);
         SecretKey symmetricKey = symmetric.generateKey();
-        symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFile);
+        symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFileOutputBuffer);
+
+        // Read from the temporary file
+        FileInputStream encryptedFileInputStream = new FileInputStream(encryptedFile);
+        BufferedInputStream encryptedFileBufferedStream = new BufferedInputStream(encryptedFileInputStream);
 
         // Send the encrypted file to the server
         io.printMessage("Sending encrypted file to server...");
-        cloudSocket.sendString("upload " + file.getName() + ".cifrado");
-        cloudSocket.sendStream(encryptedFile.size(), new ByteArrayInputStream(encryptedFile.toByteArray()));
+        cloudSocket.sendString("upload " + cipheredFileName);
+        cloudSocket.sendStream((int)encryptedFile.length(), encryptedFileBufferedStream);
 
         // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
@@ -160,10 +168,16 @@ public class myCloud {
         cloudSocket.sendString("upload " + file.getName() + ".chave_secreta");
         cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
 
+        encryptedFileBufferedStream.close();
+        encryptedFileInputStream.close();
+
+        // Delete the temporary file
+        encryptedFileOutputBuffer.close();
+        encryptedFile.delete();
+
         // Close the streams
         fileInputStream.close();
         bufferedFileStream.close();
-        encryptedFile.close();
     }
 
     private static void signFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException, SignatureException, InvalidKeyException {
