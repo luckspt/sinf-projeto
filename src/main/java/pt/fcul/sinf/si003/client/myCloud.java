@@ -129,21 +129,29 @@ public class myCloud {
      * @param file The file to encrypt
      */
     private static void hybridEncryption(File file) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
+        String cipheredFileName = file.getName() + ".cifrado";
+
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedFileStream = new BufferedInputStream(fileInputStream);
-        ByteArrayOutputStream encryptedFile = new ByteArrayOutputStream();
+        // encrypted file is a temporary file
+        File encryptedFile = new File(getBaseDir(), cipheredFileName);
+        FileOutputStream encryptedFileOutputBuffer = new FileOutputStream(encryptedFile);
 
         // Generate the key and encrypt the file
         io.printMessage("Encrypting file with AES 128...");
         Symmetric symmetric = new Symmetric("AES", 128);
         SecretKey symmetricKey = symmetric.generateKey();
-        symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFile);
+        symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFileOutputBuffer);
+
+        // Read from the temporary file
+        FileInputStream encryptedFileInputStream = new FileInputStream(encryptedFile);
+        BufferedInputStream encryptedFileBufferedStream = new BufferedInputStream(encryptedFileInputStream);
 
         // Send the encrypted file to the server
         io.printMessage("Sending encrypted file to server...");
-        cloudSocket.sendString("upload " + file.getName() + ".cifrado");
-        cloudSocket.sendStream(encryptedFile.size(), new ByteArrayInputStream(encryptedFile.toByteArray()));
+        cloudSocket.sendString("upload " + cipheredFileName);
+        cloudSocket.sendStream((int)encryptedFile.length(), encryptedFileBufferedStream);
 
         // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
@@ -159,10 +167,16 @@ public class myCloud {
         cloudSocket.sendString("upload " + file.getName() + ".chave_secreta");
         cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
 
+        encryptedFileBufferedStream.close();
+        encryptedFileInputStream.close();
+
+        // Delete the temporary file
+        encryptedFileOutputBuffer.close();
+        encryptedFile.delete();
+
         // Close the streams
         fileInputStream.close();
         bufferedFileStream.close();
-        encryptedFile.close();
     }
 
     private static void signFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException, SignatureException, InvalidKeyException {
@@ -189,22 +203,21 @@ public class myCloud {
         cloudSocket.sendStream((int) file.length(), bufferedInputStream);
     }
 
-    private static void decipherHybridEncryption(File file, InputStream fileInputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+    private static void decipherHybridEncryption(String keyName, InputStream fileInputStream, OutputStream outputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         // Download wrapped key from the server
         ByteArrayOutputStream wrappedKeyOutputStream = new ByteArrayOutputStream();
 
-        String wrappedKeyFileName = file.getName().replace(".cifrado", ".chave_secreta");
-        io.printMessage("Downloading wrapped key " + wrappedKeyFileName + "...");
+        io.printMessage("Downloading wrapped key " + keyName + "...");
 
         // Make sure the wrapped key exists
-        cloudSocket.sendString("exists " + wrappedKeyFileName);
+        cloudSocket.sendString("exists " + keyName);
         if (!cloudSocket.receiveBool()) {
-            io.error("Wrapped key " + wrappedKeyFileName + " does not exist in the server");
+            io.error("Wrapped key " + keyName + " does not exist in the server");
             return;
         }
 
         // Download the wrapped key
-        cloudSocket.sendString("download " + wrappedKeyFileName);
+        cloudSocket.sendString("download " + keyName);
         cloudSocket.receiveStream(wrappedKeyOutputStream);
 
         // Unwrap the symmetric key
@@ -223,8 +236,7 @@ public class myCloud {
 
         // Decrypt the file
         Symmetric symmetric = new Symmetric("AES", 128);
-        // TODO: write file to disk or memory?
-        symmetric.decrypt(symmetricKey, fileInputStream, new FileOutputStream(file));
+        symmetric.decrypt(symmetricKey, fileInputStream, outputStream);
     }
 
     /**
@@ -235,20 +247,32 @@ public class myCloud {
      */
     private static void downloadAndDecipherFile(File file) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         // Create the streams
-        ByteArrayOutputStream fileStream = new ByteArrayOutputStream();
+        // Create a temporary file to store the file
+        FileOutputStream fileOutputStream = new FileOutputStream(file);
+        BufferedOutputStream fileBufferedOutputStream = new BufferedOutputStream(fileOutputStream);
 
         // Download file to the output stream
         io.printMessage("Downloading file " + file.getName() + "...");
         cloudSocket.sendString("download " + file.getName());
-        cloudSocket.receiveStream(fileStream);
+        cloudSocket.receiveStream(fileBufferedOutputStream);
 
         io.printMessage("File " + file.getName() + " downloaded!");
 
-        String extension = file.getName().substring(file.getName().lastIndexOf(".") + 1);
+        // Read the temporary file
+        FileInputStream fileInputStream = new FileInputStream(file);
+        BufferedInputStream fileBufferedInputStream = new BufferedInputStream(fileInputStream);
+
+        int lastIndexOfDot = file.getName().lastIndexOf(".");
+        String fileName = file.getName().substring(0, lastIndexOfDot);
+        String extension = file.getName().substring(lastIndexOfDot + 1);
+
+        File outputFile = new File(getBaseDir(), fileName);
+        FileOutputStream outputFileOutputStream = new FileOutputStream(outputFile);
+        BufferedOutputStream outputFileBufferedOutputStream = new BufferedOutputStream(outputFileOutputStream);
         switch (extension) {
             // If the file is encrypted with hybrid encryption
             case "cifrado":
-                decipherHybridEncryption(file, new ByteArrayInputStream(fileStream.toByteArray()));
+                decipherHybridEncryption(fileName + ".chave_secreta", fileBufferedInputStream, outputFileBufferedOutputStream);
                 break;
             // If the file is signed
             case "assinado":
@@ -260,6 +284,15 @@ public class myCloud {
             default:
                 io.errorAndExit("Invalid file extension");
         }
+
+        // Close the streams
+        fileBufferedInputStream.close();
+        fileInputStream.close();
+        fileBufferedOutputStream.close();
+        fileOutputStream.close();
+
+        // Delete the temporary file
+        file.delete();
     }
 
     /**
