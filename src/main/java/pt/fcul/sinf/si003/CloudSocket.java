@@ -3,35 +3,79 @@ package pt.fcul.sinf.si003;
 import java.io.*;
 import java.net.Socket;
 
+/**
+ * The CloudSocket abstracts the socket communication for the service
+ * <p>
+ * It provides methods to send and receive different types of data
+ */
 public class CloudSocket {
+    /**
+     * The socket used for communication
+     */
     private final Socket socket;
+
+    /**
+     * The size of the chunks used to send streams
+     */
     private final int CHUNK_SIZE = 1024;
 
+    /**
+     * The ObjectInputStream
+     */
     private ObjectInputStream in;
+
+    /**
+     * The ObjectOutputStream
+     */
     private ObjectOutputStream out;
 
+    /**
+     * Get the ObjectInputStream
+     *
+     * @return The ObjectInputStream
+     * @throws IOException If an error occurs
+     */
     private ObjectInputStream getIn() throws IOException {
         if (in == null)
             in = new ObjectInputStream(socket.getInputStream());
         return in;
     }
 
+    /**
+     * Get the ObjectOutputStream
+     *
+     * @return The ObjectOutputStream
+     * @throws IOException If an error occurs
+     */
     private ObjectOutputStream getOut() throws IOException {
         if (out == null)
             out = new ObjectOutputStream(socket.getOutputStream());
         return out;
     }
 
+    /**
+     * Create a new CloudSocket
+     *
+     * @param host Hostname or IP
+     * @param port Port
+     * @throws IOException If an error occurs
+     */
     public CloudSocket(String host, int port) throws IOException {
         this(new Socket(host, port));
     }
 
+    /**
+     * Create a new CloudSocket from a socket
+     *
+     * @param socket Socket to use
+     * @throws IOException If an error occurs
+     */
     public CloudSocket(Socket socket) throws IOException {
         this.socket = socket;
     }
 
     /**
-     * Send a string to the socket
+     * Send a string
      *
      * @param string String to send
      */
@@ -45,7 +89,7 @@ public class CloudSocket {
     }
 
     /**
-     * Send an int to the socket
+     * Send an integer
      *
      * @param value Int to send
      */
@@ -58,6 +102,11 @@ public class CloudSocket {
         }
     }
 
+    /**
+     * Send a boolean
+     *
+     * @param bool Boolean to send
+     */
     public void sendBool(boolean bool) {
         try {
             getOut().writeBoolean(bool);
@@ -68,12 +117,12 @@ public class CloudSocket {
     }
 
     /**
-     * Send a buffer to the socket
+     * Send a stream
      *
-     * @param length      Length of the buffer
-     * @param inputBuffer Buffer to send
+     * @param length      Length of the stream
+     * @param inputStream Stream to send
      */
-    public void sendStream(int length, InputStream inputBuffer) {
+    public void sendStream(int length, InputStream inputStream) {
         try {
             // Send the length of the file
             this.sendInt(length);
@@ -84,7 +133,7 @@ public class CloudSocket {
             // Send the file in chunks of CHUNK_SIZE bytes, until the end
             do {
                 // Read chunkSize bytes from the file
-                int bytesRead = inputBuffer.read(buffer, 0, Math.min(CHUNK_SIZE, length));
+                int bytesRead = inputStream.read(buffer, 0, Math.min(CHUNK_SIZE, length));
                 // EOF
                 if (bytesRead == 0) {
                     break;
@@ -100,7 +149,7 @@ public class CloudSocket {
     }
 
     /**
-     * Send a byte array to the socket
+     * Send a byte array
      *
      * @param bytes  Byte array to send
      * @param length Length of the byte array

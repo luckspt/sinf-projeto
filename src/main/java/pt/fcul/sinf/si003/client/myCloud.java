@@ -25,7 +25,6 @@ public class myCloud {
     private static final IO io = new IO("Client");
     private static ClientKeyStore clientKeyStore;
     private static String baseDir = "./";
-    private static Sign sign;
 
     public static String getBaseDir() {
         return baseDir;
