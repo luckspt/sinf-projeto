@@ -86,7 +86,7 @@ public class CloudSocket {
                 // Read chunkSize bytes from the file
                 int bytesRead = inputBuffer.read(buffer, 0, Math.min(CHUNK_SIZE, length));
                 // EOF
-                if (bytesRead == 0) {
+                if (bytesRead <= 0) {
                     break;
                 }
 
