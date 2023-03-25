@@ -200,6 +200,8 @@ public class myCloud {
         // Send the signed file to the server
         io.printMessage("Sending signed file to server...");
         cloudSocket.sendString("upload " + file.getName() + ".assinado");
+        // Reset the stream to the beginning
+        bufferedInputStream = new BufferedInputStream(new FileInputStream(file));
         cloudSocket.sendStream((int) file.length(), bufferedInputStream);
     }
 
@@ -276,7 +278,23 @@ public class myCloud {
                 break;
             // If the file is signed
             case "assinado":
-                // verifySignature(file)
+                // Download file signature to the output stream
+                ByteArrayOutputStream signatureStream = new ByteArrayOutputStream();
+                String signature_filename = file.getName().substring(0, file.getName().lastIndexOf(".")) + ".assinatura";
+                io.printMessage("Downloading file " + signature_filename + "...");
+                cloudSocket.sendString("download " + signature_filename);
+                cloudSocket.receiveStream(signatureStream);
+
+                try {
+                    verifySignature(file, signatureStream, fileStream);
+                } catch (SignatureException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+
+                // remove temporary files
+                //file.delete();
+                //new File(signature_filename).delete();
                 break;
             // If the file is encrypted with hybrid encryption and signed
             case "seguro":
@@ -293,6 +311,29 @@ public class myCloud {
 
         // Delete the temporary file
         file.delete();
+    }
+
+    private static void verifySignature(File file, ByteArrayOutputStream signatureStream, ByteArrayOutputStream fileStream) throws KeyStoreException, IOException, InvalidKeyException, NoSuchAlgorithmException, SignatureException {
+        // vê se existe esse ficheiro no servidor (é a mesma linha que vê para o seguro e cifrado) e transfere se existir
+        // switch de ser cifrado, assinado, ou seguro
+        // chama a função de verificar
+        // rvidor se tem assinatura. Se sim transfere
+        // Se não tiver dá erro e passa ao proximo ficheiro
+        // No fim remove os ficheiros temporários (a assinatura só)
+
+        // Get private key from keystore
+        Certificate certificate = clientKeyStore.getAliasCertificate();
+        // Sign file
+        io.printMessage("Signing file with SHA256withRSA...");
+        Sign signature = new Sign("SHA256withRSA");
+
+//        if(signature.verify(fileStream.toByteArray(), new ByteArrayInputStream(signatureStream.toByteArray()), certificate))
+        if(signature.verify(signatureStream.toByteArray(), new ByteArrayInputStream(fileStream.toByteArray()), certificate))
+            io.printMessage("Signature correctly verified!");
+        else
+            io.printMessage("Signature not verified!");
+
+
     }
 
     /**
