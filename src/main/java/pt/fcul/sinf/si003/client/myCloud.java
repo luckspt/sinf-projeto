@@ -241,6 +241,25 @@ public class myCloud {
         symmetric.decrypt(symmetricKey, fileInputStream, outputStream);
     }
 
+    private static List<String> getRelatedFiles(File file) {
+        int lastIndexOf = file.getName().lastIndexOf(".");
+        String fileName = file.getName().substring(0, lastIndexOf);
+        String extension = file.getName().substring(lastIndexOf + 1);
+
+        List<String> relatedFiles = new ArrayList<>();
+        switch (extension) {
+            case "seguro":
+            case "assinado":
+                relatedFiles.add(fileName + ".assinatura");
+                break;
+            case "cifrado":
+                relatedFiles.add(fileName + ".chave_secreta");
+                break;
+        }
+
+        return relatedFiles;
+    }
+
     /**
      * Download the file from the server, decipher it, and validate the signature
      *
@@ -252,6 +271,8 @@ public class myCloud {
         // Create a temporary file to store the file
         FileOutputStream fileOutputStream = new FileOutputStream(file);
         BufferedOutputStream fileBufferedOutputStream = new BufferedOutputStream(fileOutputStream);
+
+        List<String> relatedFiles = getRelatedFiles(file);
 
         // Download file to the output stream
         io.printMessage("Downloading file " + file.getName() + "...");
