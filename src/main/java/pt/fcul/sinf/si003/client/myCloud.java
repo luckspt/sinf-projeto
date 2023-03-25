@@ -307,7 +307,7 @@ public class myCloud {
                 cloudSocket.receiveStream(signatureStream);
 
                 try {
-                    verifySignature(file, signatureStream, fileStream);
+                    verifySignature(file, signatureStream, fileBufferedInputStream);
                 } catch (SignatureException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
@@ -334,7 +334,7 @@ public class myCloud {
         file.delete();
     }
 
-    private static void verifySignature(File file, ByteArrayOutputStream signatureStream, ByteArrayOutputStream fileStream) throws KeyStoreException, IOException, InvalidKeyException, NoSuchAlgorithmException, SignatureException {
+    private static void verifySignature(File file, ByteArrayOutputStream signatureStream, InputStream fileStream) throws KeyStoreException, IOException, InvalidKeyException, NoSuchAlgorithmException, SignatureException {
         // vê se existe esse ficheiro no servidor (é a mesma linha que vê para o seguro e cifrado) e transfere se existir
         // switch de ser cifrado, assinado, ou seguro
         // chama a função de verificar
@@ -349,7 +349,7 @@ public class myCloud {
         Sign signature = new Sign("SHA256withRSA");
 
 //        if(signature.verify(fileStream.toByteArray(), new ByteArrayInputStream(signatureStream.toByteArray()), certificate))
-        if(signature.verify(signatureStream.toByteArray(), new ByteArrayInputStream(fileStream.toByteArray()), certificate))
+        if(signature.verify(signatureStream.toByteArray(), fileStream, certificate))
             io.printMessage("Signature correctly verified!");
         else
             io.printMessage("Signature not verified!");
