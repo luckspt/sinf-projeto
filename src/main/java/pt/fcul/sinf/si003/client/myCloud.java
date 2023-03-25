@@ -113,7 +113,11 @@ public class myCloud {
                     // TODO: using hybrid encryption and sign file
                     break;
                 case "g":
-                    downloadAndDecipherFile(file);
+                    try {
+                        downloadAndDecipherFile(file);
+                    } catch (IOException ioException) {
+                        io.error(ioException.getMessage());
+                    }
                     break;
                 default:
                     io.errorAndExit("Invalid method");
@@ -206,12 +210,11 @@ public class myCloud {
     }
 
     private static void decipherHybridEncryption(InputStream fileInputStream, ByteArrayOutputStream keyStream, OutputStream outputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
-        // Unwrap the symmetric key
-        io.printMessage("Wrapped key downloaded!");
-        io.printMessage("Unwrapping symmetric key with private key...");
-
         // Get the private key from the keystore
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
+
+        // Unwrap the symmetric key
+        io.printMessage("Unwrapping symmetric key with private key...");
 
         // Unwrap the symmetric key with the private key
         Asymmetric asymmetric = new Asymmetric("RSA", 2048);
@@ -223,6 +226,8 @@ public class myCloud {
         // Decrypt the file
         Symmetric symmetric = new Symmetric("AES", 128);
         symmetric.decrypt(symmetricKey, fileInputStream, outputStream);
+
+        io.printMessage("File decrypted!");
     }
 
     private static Pair<String, String> getNameAndExtension(String fileName) {
@@ -244,18 +249,23 @@ public class myCloud {
         }
     }
 
-    private static void downloadFile(String fileName, OutputStream outputStream) {
-        // Check if the file exists
-        cloudSocket.sendString("exists " + fileName);
+    private static void downloadFile(File file, OutputStream outputStream) throws IOException {
+        // Check if the file exists locally
+        if (file.exists()) {
+            throw new IOException("File " + file.getName() + " already exists locally");
+        }
+
+        // Check if the file exists in the server
+        cloudSocket.sendString("exists " + file.getName());
         if (!cloudSocket.receiveBool()) {
-            throw new RuntimeException("File " + fileName + " does not exist in the server");
+            throw new IOException("File " + file.getName() + " does not exist in the server");
         }
 
         // Download file to the output stream
-        io.printMessage("Downloading file " + fileName + "...");
-        cloudSocket.sendString("download " + fileName);
+        io.printMessage("Downloading file " + file.getName() + "...");
+        cloudSocket.sendString("download " + file.getName());
         cloudSocket.receiveStream(outputStream);
-        io.printMessage("File " + fileName + " downloaded!");
+        io.printMessage("File " + file.getName() + " downloaded!");
     }
 
     /**
@@ -276,10 +286,10 @@ public class myCloud {
 
         // Download related file (signature or wrapped key) to memory (it's less than 1MB)
         ByteArrayOutputStream relatedFileOutputStream = new ByteArrayOutputStream();
-        downloadFile(getRelatedFile(fileName, fileExtension), relatedFileOutputStream);
+        downloadFile(new File(getBaseDir(), getRelatedFile(fileName, fileExtension)), relatedFileOutputStream);
 
         // Download actual file
-        downloadFile(file.getName(), fileBufferedOutputStream);
+        downloadFile(file, fileBufferedOutputStream);
 
         // Read the temporary file
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -288,12 +298,11 @@ public class myCloud {
         // Create the output file
         File outputFile = new File(getBaseDir(), fileName);
         FileOutputStream outputFileOutputStream = new FileOutputStream(outputFile);
-        BufferedOutputStream outputFileBufferedOutputStream = new BufferedOutputStream(outputFileOutputStream);
 
         switch (fileExtension) {
             // If the file is encrypted with hybrid encryption
             case "cifrado":
-                decipherHybridEncryption(fileBufferedInputStream, relatedFileOutputStream, outputFileBufferedOutputStream);
+                decipherHybridEncryption(fileBufferedInputStream, relatedFileOutputStream, outputFileOutputStream);
                 break;
             // If the file is signed
             case "assinado":
@@ -313,6 +322,7 @@ public class myCloud {
         }
 
         // Close the streams
+        outputFileOutputStream.close();
         fileBufferedInputStream.close();
         fileInputStream.close();
         fileBufferedOutputStream.close();

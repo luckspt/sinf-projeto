@@ -1,5 +1,7 @@
 package pt.fcul.sinf.si003.client;
 
+import pt.fcul.sinf.si003.IO;
+
 import javax.crypto.*;
 import java.io.IOException;
 import java.io.InputStream;
