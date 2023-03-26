@@ -99,7 +99,7 @@ public class ServerThread extends Thread {
     private void downloadFile(File file) throws FileNotFoundException {
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
-        cloudSocket.sendStream((int) file.length(), bufferedInputStream);
+        cloudSocket.sendStream(file.length(), bufferedInputStream);
     }
 
     /**
