@@ -179,6 +179,35 @@ public class myCloud {
         bufferedFileStream.close();
     }
 
+
+    /**
+     * Read the file received to sign, create a signed file to the client and send the used signature to the server
+     *
+     * @param file The file to sign
+     * 
+     * @throws IOException If an I/O error occurs
+     * @throws KeyStoreException If the keystore has not been initialized
+     * @throws NoSuchAlgorithmException If the algorithm used to check the integrity of the keystore cannot be found
+     * @throws UnrecoverableKeyException If the key cannot be recovered
+     * @throws SignatureException If the signature algorithm is unable to process the input data provided
+     * @throws InvalidKeyException If the key used to initialize the signature is invalid
+     */
+
+
+
+    /**
+     * Read the file received to sign, create a signed file and a signature and send them to the server
+     *
+     * @param file The file to sign
+     * 
+     * @throws IOException If an I/O error occurs
+     * @throws KeyStoreException If the keystore has not been initialized
+     * @throws NoSuchAlgorithmException If the algorithm used to check the integrity of the keystore cannot be found
+     * @throws UnrecoverableKeyException If the key cannot be recovered
+     * @throws SignatureException If the signature algorithm is unable to process the input data provided
+     * @throws InvalidKeyException If the key used to initialize the signature is invalid
+     */
+
     private static void signFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException, SignatureException, InvalidKeyException {
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -201,6 +230,7 @@ public class myCloud {
         io.printMessage("Sending signed file to server...");
         cloudSocket.sendString("upload " + file.getName() + ".assinado");
         // Reset the stream to the beginning
+        
         bufferedInputStream = new BufferedInputStream(new FileInputStream(file));
         cloudSocket.sendStream((int) file.length(), bufferedInputStream);
     }
