@@ -1,6 +1,7 @@
 package pt.fcul.sinf.si003;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,9 +63,9 @@ public class IO {
         System.out.println("[" + name + "] " + message);
     }
 
-    public File openFile(String baseDir, String path, boolean errorIfNotExists) {
+    public File openFile(String baseDir, String path, boolean exitIfNotExists) {
         File file = new File(baseDir, path);
-        if (errorIfNotExists && !file.exists())
+        if (exitIfNotExists && !file.exists())
             errorAndExit("File " + path + " does not exist (" + file.getAbsolutePath() + ")");
 
         return file;

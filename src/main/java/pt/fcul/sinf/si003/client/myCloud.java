@@ -83,7 +83,11 @@ public class myCloud {
         // Execute the method
         for (String fileName : fileNames) {
             // Validate file existence locally, only if it's not a download
-            File file = io.openFile(getBaseDir(), fileName, !method.equals("g"));
+            File file = io.openFile(getBaseDir(), fileName, false);
+            if (!file.exists()) {
+                io.error("File " + fileName + " does not exist locally.");
+                continue;
+            }
 
             // and on the server
             boolean cipheredExists = fileExistsInServer(new File(fileName + ".cifrado"));
@@ -93,34 +97,40 @@ public class myCloud {
             // If it's a download, check if the file exists on the server
             //  ciphered, signed, or secure are mutually exclusive
             if (!method.equals("g") && (cipheredExists || signedExists || secureExists)) {
-                io.printMessage("File " + fileName + " already exists on the server");
+                io.error("File " + fileName + " already exists on the server");
                 continue;
             }
 
-            switch (method) {
-                case "c":
-                    // Hybrid encryption
-                    io.printMessage("Performing hybrid encryption on file " + fileName + "...");
-                    hybridEncryption(file);
-                    break;
-                case "s":
-                    io.printMessage("Signing file " + fileName + "...");
-                    signFile(file);
-                    break;
-                case "e":
-                    io.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
-                    // TODO: using hybrid encryption and sign file
-                    break;
-                case "g":
-                    if (!cipheredExists && !signedExists && !secureExists) {
-                        io.printMessage("File " + fileName + " does not exist on the server");
-                        continue;
-                    }
+            try {
+                switch (method) {
+                    case "c":
+                        // Hybrid encryption
+                        io.printMessage("Performing hybrid encryption on file " + fileName + "...");
+                        hybridEncryption(file);
+                        break;
+                    case "s":
+                        io.printMessage("Signing file " + fileName + "...");
+                        signFile(file);
+                        break;
+                    case "e":
+                        io.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
+                        // TODO: using hybrid encryption and sign file
+                        break;
+                    case "g":
+                        if (!cipheredExists && !signedExists && !secureExists) {
+                            io.printMessage("File " + fileName + " does not exist on the server");
+                            continue;
+                        }
 
-                    downloadAndDecipherFile(file, cipheredExists, signedExists, secureExists);
-                    break;
-                default:
-                    io.errorAndExit("Invalid method");
+                        downloadAndDecipherFile(file, cipheredExists, signedExists, secureExists);
+                        break;
+                    default:
+                        io.errorAndExit("Invalid method");
+                }
+            } catch (InvalidKeyException e) {
+                io.error("Key error: Invalid key usage on " + fileName + ".");
+            } catch (Exception e) {
+                io.error("Error: " + fileName + ": " + e.getMessage());
             }
         }
 
