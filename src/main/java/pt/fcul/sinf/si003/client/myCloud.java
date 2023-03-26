@@ -24,6 +24,9 @@ public class myCloud {
     private static CloudSocket cloudSocket;
     private static final IO io = new IO("Client");
     private static ClientKeyStore clientKeyStore;
+    private static Asymmetric asymmetric;
+    private static Symmetric symmetric;
+    private static Sign signature;
     private static String baseDir = "./";
 
     public static String getBaseDir() {
@@ -31,6 +34,10 @@ public class myCloud {
     }
 
     public static void main(String[] args) throws NoSuchAlgorithmException, IOException, CertificateException, KeyStoreException, UnrecoverableKeyException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, SignatureException {
+        asymmetric = new Asymmetric("RSA", 2048);
+        symmetric = new Symmetric("AES", 128);
+        signature = new Sign("SHA256withRSA");
+
         // Check arguments
         Map<String, List<String>> arguments = io.parseArguments(args);
 
@@ -143,10 +150,10 @@ public class myCloud {
         else if (signedExists)
             verifyFile(file, "assinado");
         // else if (secureExists) {
-           // decipherHybridEncryption(file, "seguro");
-            // verifyFile(file);
+        // decipherHybridEncryption(file, "seguro");
+        // verifyFile(file);
         // } else
-           // io.error("File " + file.getName() + " does not exist on the server");
+        // io.error("File " + file.getName() + " does not exist on the server");
     }
 
     private static void decipherHybridEncryption(File file, String cipheredExtension) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
@@ -158,14 +165,19 @@ public class myCloud {
         // Unwrap the symmetric key
         io.printMessage("Unwrapping symmetric key...");
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
-        Asymmetric asymmetric = new Asymmetric("RSA", 2048);
         SecretKey symmetricKey = (SecretKey) asymmetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
         io.printMessage("Symmetric key unwrapped!");
+
+        // Close wrapped key stream
+        wrappedKeyOutputStream.close();
 
         // Download the ciphered file
         File cipheredFile = new File(getBaseDir(), file.getName() + "." + cipheredExtension);
         FileOutputStream cipheredOutputStream = new FileOutputStream(cipheredFile);
         downloadFile(cipheredFile, cipheredOutputStream);
+
+        // Close ciphered output file stream
+        cipheredOutputStream.close();
 
         // Decipher the file
         FileInputStream cipheredInputStream = new FileInputStream(cipheredFile);
@@ -173,12 +185,12 @@ public class myCloud {
         FileOutputStream fileOutputStream = new FileOutputStream(file);
 
         io.printMessage("Deciphering " + file.getName() + " with AES 128...");
-        Symmetric symmetric = new Symmetric("AES", 128);
         symmetric.decrypt(symmetricKey, bufferedCipheredInputStream, fileOutputStream);
         io.printMessage(file.getName() + " deciphered!");
 
         // Close the streams and delete the temporary file
-        cipheredOutputStream.close();
+        bufferedCipheredInputStream.close();
+        cipheredInputStream.close();
         cipheredFile.delete();
         fileOutputStream.close();
     }
@@ -192,6 +204,8 @@ public class myCloud {
         // Download the signed file
         FileOutputStream signedOutputStream = new FileOutputStream(file);
         downloadFile(new File(getBaseDir(), file.getName() + "." + signedExtension), signedOutputStream);
+
+        // Close signed output file stream
         signedOutputStream.close();
 
         FileInputStream signedInputStream = new FileInputStream(file);
@@ -201,6 +215,9 @@ public class myCloud {
         Certificate certificate = clientKeyStore.getAliasCertificate();
         Sign signature = new Sign("SHA256withRSA");
         boolean valid = signature.verify(signatureOutputStream.toByteArray(), bufferedSignedInputStream, certificate);
+
+        // Close the signature stream
+        signatureOutputStream.close();
 
         // Close the streams and delete the temporary file
         bufferedSignedInputStream.close();
@@ -229,18 +246,27 @@ public class myCloud {
 
         // Generate the key and encrypt the file
         io.printMessage("Encrypting file with AES 128...");
-        Symmetric symmetric = new Symmetric("AES", 128);
         SecretKey symmetricKey = symmetric.generateKey();
         symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFileOutputBuffer);
 
+        // Close file input stream and encrypted file output stream
+        bufferedFileStream.close();
+        fileInputStream.close();
+        encryptedFileOutputBuffer.close();
+
         // Read from the temporary file
         FileInputStream encryptedFileInputStream = new FileInputStream(encryptedFile);
-        BufferedInputStream encryptedFileBufferedStream = new BufferedInputStream(encryptedFileInputStream);
+        BufferedInputStream encryptedFileBufferedInputStream = new BufferedInputStream(encryptedFileInputStream);
 
         // Send the encrypted file to the server
         io.printMessage("Sending encrypted file to server...");
         cloudSocket.sendString("upload " + cipheredFileName);
-        cloudSocket.sendStream((int) encryptedFile.length(), encryptedFileBufferedStream);
+        cloudSocket.sendStream((int) encryptedFile.length(), encryptedFileBufferedInputStream);
+
+        // Close file input stream and delete the temporary file
+        encryptedFileBufferedInputStream.close();
+        encryptedFileInputStream.close();
+        encryptedFile.delete();
 
         // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
@@ -248,24 +274,12 @@ public class myCloud {
 
         // Wrap the symmetric key with the public key
         io.printMessage("Wrapping symmetric key with public key...");
-        Asymmetric asymmetric = new Asymmetric("RSA", 2048);
         byte[] wrappedKey = asymmetric.wrapKey(symmetricKey, publicKey);
 
         // Send the wrapped key to the server
         io.printMessage("Sending wrapped key to server...");
         cloudSocket.sendString("upload " + file.getName() + ".chave_secreta");
         cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
-
-        encryptedFileBufferedStream.close();
-        encryptedFileInputStream.close();
-
-        // Delete the temporary file
-        encryptedFileOutputBuffer.close();
-        encryptedFile.delete();
-
-        // Close the streams
-        fileInputStream.close();
-        bufferedFileStream.close();
     }
 
 
@@ -273,7 +287,7 @@ public class myCloud {
      * Read the file received to sign, create a signed file to the client and send the used signature to the server
      *
      * @param file The file to sign
-     * 
+     *
      * @throws IOException If an I/O error occurs
      * @throws KeyStoreException If the keystore has not been initialized
      * @throws NoSuchAlgorithmException If the algorithm used to check the integrity of the keystore cannot be found
@@ -283,18 +297,16 @@ public class myCloud {
      */
 
 
-
     /**
      * Read the file received to sign, create a signed file and a signature and send them to the server
      *
      * @param file The file to sign
-     * 
-     * @throws IOException If an I/O error occurs
-     * @throws KeyStoreException If the keystore has not been initialized
-     * @throws NoSuchAlgorithmException If the algorithm used to check the integrity of the keystore cannot be found
+     * @throws IOException               If an I/O error occurs
+     * @throws KeyStoreException         If the keystore has not been initialized
+     * @throws NoSuchAlgorithmException  If the algorithm used to check the integrity of the keystore cannot be found
      * @throws UnrecoverableKeyException If the key cannot be recovered
-     * @throws SignatureException If the signature algorithm is unable to process the input data provided
-     * @throws InvalidKeyException If the key used to initialize the signature is invalid
+     * @throws SignatureException        If the signature algorithm is unable to process the input data provided
+     * @throws InvalidKeyException       If the key used to initialize the signature is invalid
      */
 
     private static void signFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException, SignatureException, InvalidKeyException {
@@ -307,21 +319,35 @@ public class myCloud {
 
         // Sign file
         io.printMessage("Signing file with SHA256withRSA...");
-        Sign signature = new Sign("SHA256withRSA");
         byte[] signatureData = signature.sign(bufferedInputStream, privateKey);
+
+        // Close file input stream
+        bufferedInputStream.close();
+        fileInputStream.close();
+
+        // Create the stream for the signature
+        ByteArrayInputStream signatureInputStream = new ByteArrayInputStream(signatureData);
 
         // Send the signature to the server
         io.printMessage("Sending signature to server...");
         cloudSocket.sendString("upload " + file.getName() + ".assinatura");
-        cloudSocket.sendStream(signatureData.length, new ByteArrayInputStream(signatureData));
+        cloudSocket.sendStream(signatureData.length, signatureInputStream);
+
+        // Close signature input stream
+        signatureInputStream.close();
+
+        // Read the signed file
+        FileInputStream signedFileInputStream = new FileInputStream(file);
+        BufferedInputStream signedFileBufferedInputStream = new BufferedInputStream(signedFileInputStream);
 
         // Send the signed file to the server
         io.printMessage("Sending signed file to server...");
         cloudSocket.sendString("upload " + file.getName() + ".assinado");
-        // Reset the stream to the beginning
-        
-        bufferedInputStream = new BufferedInputStream(new FileInputStream(file));
-        cloudSocket.sendStream((int) file.length(), bufferedInputStream);
+        cloudSocket.sendStream((int) file.length(), signedFileBufferedInputStream);
+
+        // Close signed file input stream
+        signedFileBufferedInputStream.close();
+        signedFileInputStream.close();
     }
 
     private static void downloadFile(File file, OutputStream outputStream) throws IOException {
@@ -336,29 +362,6 @@ public class myCloud {
         cloudSocket.sendString("download " + file.getName());
         cloudSocket.receiveStream(outputStream);
         io.printMessage("File " + file.getName() + " downloaded!");
-    }
-
-    private static void verifySignature(InputStream fileStream, ByteArrayOutputStream signatureStream) throws KeyStoreException, IOException, InvalidKeyException, NoSuchAlgorithmException, SignatureException {
-        // vê se existe esse ficheiro no servidor (é a mesma linha que vê para o seguro e cifrado) e transfere se existir
-        // switch de ser cifrado, assinado, ou seguro
-        // chama a função de verificar
-        // rvidor se tem assinatura. Se sim transfere
-        // Se não tiver dá erro e passa ao proximo ficheiro
-        // No fim remove os ficheiros temporários (a assinatura só)
-
-        // Get private key from keystore
-        Certificate certificate = clientKeyStore.getAliasCertificate();
-        // Sign file
-        io.printMessage("Signing file with SHA256withRSA...");
-        Sign signature = new Sign("SHA256withRSA");
-
-//        if(signature.verify(fileStream.toByteArray(), new ByteArrayInputStream(signatureStream.toByteArray()), certificate))
-        if (signature.verify(signatureStream.toByteArray(), fileStream, certificate))
-            io.printMessage("Signature correctly verified!");
-        else
-            io.printMessage("Signature not verified!");
-
-
     }
 
     /**
@@ -384,6 +387,4 @@ public class myCloud {
         cloudSocket.sendString("exists " + file.getName());
         return cloudSocket.receiveBool();
     }
-
-
 }
