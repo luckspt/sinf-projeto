@@ -16,7 +16,7 @@ public class IO {
      * @param message The error message to print
      */
     public void error(String message) {
-        printMessage( Color.RED_BOLD + "ERROR  " + Color.RESET, Color.WHITE_UNDERLINED + message + Color.RESET);
+        printMessage( Color.RED_BOLD + " ERROR " + Color.RESET, Color.WHITE_UNDERLINED + message + Color.RESET);
     }
 
     /**
@@ -24,7 +24,7 @@ public class IO {
      * @param message The info message to print
      */
     public void info(String message) {
-        printMessage( Color.BLUE_BOLD + "INFO  " + Color.RESET, message);
+        printMessage( Color.BLUE_BOLD + " INFO  " + Color.RESET, message);
     }
 
     /**
@@ -87,5 +87,13 @@ public class IO {
      */
     public void printMessage(String type, String message) {
         System.out.println("[" + type + "] " + message);
+    }
+
+    /**
+     * Prints a message
+     * @param message The message to print
+     */
+    public void printMessage(String message) {
+        System.out.println(message);
     }
 }

@@ -120,7 +120,8 @@ public class myCloud {
 
         // Execute the method
         for (String fileName : fileNames) {
-            io.info("Executing method " + method + " on file " + fileName + "...\n");
+            io.printMessage("========================================");
+            io.info("Executing method " + method + " on file " + fileName + "...");
 
             // Validate file existence locally, only if it's not a download
             File file = new File(getBaseDir(), fileName);
@@ -197,10 +198,12 @@ public class myCloud {
                 }
             } catch (InvalidKeyException e) {
                 io.error("Key error: Invalid key usage on " + fileName + ".");
+            } catch (SignatureException e) {
+                io.error("Signature error: " + fileName + " signature is not valid.");
             } catch (Exception e) {
                 io.error("Error: " + fileName + ": " + e.getMessage());
             } finally {
-                io.info("Finished executing method " + method + " on file " + fileName + ".\n\n");
+                io.info("Finished executing method " + method + " on file " + fileName + ".\n");
             }
         }
 

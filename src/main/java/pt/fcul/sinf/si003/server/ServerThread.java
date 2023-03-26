@@ -86,8 +86,16 @@ public class ServerThread extends Thread {
      * @param file the file do be deleted
      */
     private void deleteFile(File file) {
+        io.info("Deleting file: " + file.getAbsolutePath());
         if (file.exists()) {
-            file.delete();
+            boolean r = file.delete();
+
+            if (r)
+                io.success("File deleted");
+            else
+                io.warning("File not deleted");
+        } else {
+            io.warning("File does not exist");
         }
     }
 
@@ -97,9 +105,11 @@ public class ServerThread extends Thread {
      * @throws FileNotFoundException if the file does not exist
      */
     private void downloadFile(File file) throws FileNotFoundException {
+        io.info("Sending file: " + file.getAbsolutePath());
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
         cloudSocket.sendStream(file.length(), bufferedInputStream);
+        io.success("File sent");
     }
 
     /**
@@ -108,8 +118,10 @@ public class ServerThread extends Thread {
      * @throws IOException if an I/O error occurs
      */
     private void uploadFile(File file) throws IOException {
+        io.info("Receiving file: " + file.getAbsolutePath());
         FileOutputStream fileOutputStream = new FileOutputStream(file);
         cloudSocket.receiveStream(fileOutputStream);
         fileOutputStream.close();
+        io.success("File received");
     }
 }

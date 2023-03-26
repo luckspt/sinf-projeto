@@ -67,7 +67,7 @@ public class myCloudServer {
                 // Wait for connection
                 io.info("Waiting for connections...");
                 Socket clientSocket = serverSocket.accept();
-                io.info("Connection established with " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+                io.success("Connection established with " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
 
                 // Create a new thread for the connection
                 CloudSocket cloudSocket = new CloudSocket(clientSocket, chunkSize);
