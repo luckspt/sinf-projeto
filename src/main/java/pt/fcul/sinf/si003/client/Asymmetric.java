@@ -8,7 +8,7 @@ import java.security.*;
 public class Asymmetric {
     private final String algorithm;
 
-    public Asymmetric(String transformation, int keySize) {
+    public Asymmetric(String transformation) {
         this.algorithm = transformation;
     }
 

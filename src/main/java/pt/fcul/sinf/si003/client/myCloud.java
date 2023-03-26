@@ -14,37 +14,47 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-/*
- * Para usar criar ficheiro keystore:
- * keytool -genkeypair -keysize 2048 -alias jppCloud -keyalg rsa -keystore keystore.jppCloud -storetype PKCS12
- */
 public class myCloud {
 
+    /**
+     * The socket abstraction to the remote
+     */
     private static CloudSocket cloudSocket;
+    /**
+     * The IO abstraction
+     */
     private static final IO io = new IO();
+    /**
+     * The client keystore
+     */
     private static ClientKeyStore clientKeyStore;
+    /**
+     * The asymmetric cryptography abstraction
+     */
     private static Asymmetric asymmetric;
+    /**
+     * The symmetric cryptography abstraction
+     */
     private static Symmetric symmetric;
+    /**
+     * The signature abstraction
+     */
     private static Sign signature;
+    /**
+     * The base directory
+     */
     private static String baseDir = "./";
-
-    public static String getBaseDir() {
-        return baseDir;
-    }
-
-    private static boolean isAMethod(String method) {
-        return method.equals("c") || method.equals("s") || method.equals("e") || method.equals("g") || method.equals("x");
-    }
 
     /**
      * Run the client
+     *
      * @param args The arguments
      */
     public static void main(String[] args) {
-        asymmetric = new Asymmetric("RSA", 2048);
+        asymmetric = new Asymmetric("RSA");
+        signature = new Sign("SHA256withRSA");
         try {
             symmetric = new Symmetric("AES", 128);
-            signature = new Sign("SHA256withRSA");
         } catch (NoSuchAlgorithmException e) {
             // this never happens
         }
@@ -68,6 +78,8 @@ public class myCloud {
 
         if (method == null)
             io.errorAndExit("Missing method parameter (one of -c, -s, -e, -g)");
+        // Method is now guaranteed to be one of -c, -s, -e, -g, -x
+        assert method != null;
 
         // EXTRA: base directory
         if (arguments.containsKey("d"))
@@ -91,7 +103,7 @@ public class myCloud {
         // EXTRA: chunk size
         int chunkSize = 1024;
         if (arguments.containsKey("-chunkSize") && arguments.get("-chunkSize").size() == 1 && arguments.get("-chunkSize").get(0).matches("^[0-9]+$"))
-            chunkSize = Math.max(1024, Integer.parseInt(arguments.get("-chunkSize").get(0)));
+            chunkSize = Math.max(1024, Math.min(65535, Integer.parseInt(arguments.get("-chunkSize").get(0))));
 
         // Connect to server
         String[] serverAddressSplit = serverAddress.split(":");
@@ -107,7 +119,7 @@ public class myCloud {
         for (String fileName : fileNames) {
             // Validate file existence locally, only if it's not a download
             File file = new File(getBaseDir(), fileName);
-            if (!method.equals("g") && !file.exists()) {
+            if ((!method.equals("g") && !method.equals("x")) && !file.exists()) {
                 io.error("File " + fileName + " does not exist locally.");
                 continue;
             }
@@ -187,6 +199,37 @@ public class myCloud {
         }
     }
 
+    /**
+     * Get the base directory
+     *
+     * @return The base directory
+     */
+    public static String getBaseDir() {
+        return baseDir;
+    }
+
+    /**
+     * Check if it's a command method
+     *
+     * @param method The method
+     * @return True if it's a method, false otherwise
+     */
+    private static boolean isAMethod(String method) {
+        return method.equals("c") || method.equals("s") || method.equals("e") || method.equals("g") || method.equals("x");
+    }
+
+    /**
+     * Download, decipher and verify a file.
+     * <p>
+     * The priority is: secure, signed, ciphered
+     * <p>
+     * It may not decpher not verify the file if it's not necessary
+     *
+     * @param file           The file
+     * @param cipheredExists If the ciphered file exists in the remote
+     * @param signedExists   If the signed file exists in the remote
+     * @param secureExists   If the secure file exists in the remote
+     */
     private static void downloadAndDecipherFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws UnrecoverableKeyException, NoSuchPaddingException, IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
         // Establish priority:
         // 1. Secure
@@ -205,10 +248,18 @@ public class myCloud {
             signedOutputStream.close();
 
             verifyFile(file);
-        }  else if (cipheredExists)
+        } else if (cipheredExists)
             decipherHybridEncryption(file, FileExtensions.CIFRADO);
     }
 
+    /**
+     * Delete a file in the remote
+     *
+     * @param file           The file
+     * @param cipheredExists If the ciphered file exists in the remote
+     * @param signedExists   If the signed file exists in the remote
+     * @param secureExists   If the secure file exists in the remote
+     */
     private static void deleteFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) {
         // Establish priority:
         // 1. Secure
@@ -221,13 +272,19 @@ public class myCloud {
         } else if (signedExists) {
             cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
             cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
-        }  else if (cipheredExists) {
+        } else if (cipheredExists) {
             cloudSocket.sendString("delete " + file.getName() + FileExtensions.CIFRADO.getExtensionWithDot());
             cloudSocket.sendString("delete " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
         }
     }
 
-    private static void decipherHybridEncryption(File file, FileExtensions cifrado) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+    /**
+     * Decipher a file using hybrid encryption
+     *
+     * @param file      The file
+     * @param extension The file extension
+     */
+    private static void decipherHybridEncryption(File file, FileExtensions extension) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         // Download the wrapped symmetric key
         File wrappedKeyFile = new File(getBaseDir(), file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
         ByteArrayOutputStream wrappedKeyOutputStream = new ByteArrayOutputStream();
@@ -243,7 +300,7 @@ public class myCloud {
         wrappedKeyOutputStream.close();
 
         // Download the ciphered file
-        File cipheredFile = new File(getBaseDir(), file.getName() + cifrado.getExtensionWithDot());
+        File cipheredFile = new File(getBaseDir(), file.getName() + extension.getExtensionWithDot());
         FileOutputStream cipheredOutputStream = new FileOutputStream(cipheredFile);
         downloadFile(cipheredFile, cipheredOutputStream);
 
@@ -266,7 +323,16 @@ public class myCloud {
         fileOutputStream.close();
     }
 
-    private static void verifyFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
+    /**
+     * Verify a file's signature.
+     * <p>
+     * The file must be downloaded first, because this method will read from disk
+     * <p>
+     * The signature will be downloaded by this method
+     *
+     * @param file The file
+     */
+    private static boolean verifyFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
         // Download the signature
         File signatureFile = new File(getBaseDir(), file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
         ByteArrayOutputStream signatureOutputStream = new ByteArrayOutputStream();
@@ -290,12 +356,15 @@ public class myCloud {
             io.info("Signature is valid!");
         else
             io.warning("Signature is not valid!");
+
+        return valid;
     }
 
     /**
-     * Read the file on the path, encrypt it, and send it to the server
+     * Read the file on the path, encrypt it with hybrid encryption, and send it to the remote
      *
-     * @param file The file to encrypt
+     * @param file              The file to encrypt
+     * @param cipheredExtension The ciphered file extension
      */
     private static void hybridEncryption(File file, FileExtensions cipheredExtension) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
         String cipheredFileName = file.getName() + cipheredExtension.getExtensionWithDot();
@@ -345,33 +414,11 @@ public class myCloud {
         cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
     }
 
-
     /**
-     * Read the file received to sign, create a signed file to the client and send the used signature to the server
+     * Sign a file with the private key from the keystore
      *
      * @param file The file to sign
-     *
-     * @throws IOException If an I/O error occurs
-     * @throws KeyStoreException If the keystore has not been initialized
-     * @throws NoSuchAlgorithmException If the algorithm used to check the integrity of the keystore cannot be found
-     * @throws UnrecoverableKeyException If the key cannot be recovered
-     * @throws SignatureException If the signature algorithm is unable to process the input data provided
-     * @throws InvalidKeyException If the key used to initialize the signature is invalid
      */
-
-
-    /**
-     * Read the file received to sign, create a signed file and a signature and send them to the server
-     *
-     * @param file The file to sign
-     * @throws IOException               If an I/O error occurs
-     * @throws KeyStoreException         If the keystore has not been initialized
-     * @throws NoSuchAlgorithmException  If the algorithm used to check the integrity of the keystore cannot be found
-     * @throws UnrecoverableKeyException If the key cannot be recovered
-     * @throws SignatureException        If the signature algorithm is unable to process the input data provided
-     * @throws InvalidKeyException       If the key used to initialize the signature is invalid
-     */
-
     private static void signFile(File file) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, SignatureException, InvalidKeyException {
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -400,6 +447,12 @@ public class myCloud {
         signatureInputStream.close();
     }
 
+    /**
+     * Download a file from the remote
+     *
+     * @param file         The file to download
+     * @param outputStream The output stream to write the file to
+     */
     private static void downloadFile(File file, OutputStream outputStream) throws IOException {
         // Check if the file exists in the server
         cloudSocket.sendString("exists " + file.getName());
@@ -428,10 +481,10 @@ public class myCloud {
     }
 
     /**
-     * Check if the file exists in the server
+     * Check if the file exists in the remote
      *
      * @param file The file to check
-     * @return True if the file exists in the server, false otherwise
+     * @return True if the file exists, false otherwise
      */
     private static boolean fileExistsInServer(File file) {
         cloudSocket.sendString("exists " + file.getName());

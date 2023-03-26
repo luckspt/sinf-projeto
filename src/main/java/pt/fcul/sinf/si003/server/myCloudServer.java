@@ -42,7 +42,7 @@ public class myCloudServer {
         // EXTRA: chunk size
         int chunkSize = 1024;
         if (arguments.containsKey("-chunkSize") && arguments.get("-chunkSize").size() == 1 && arguments.get("-chunkSize").get(0).matches("^[0-9]+$"))
-            chunkSize = Math.max(1024, Integer.parseInt(arguments.get("-chunkSize").get(0)));
+            chunkSize = Math.max(1024, Math.min(65535, Integer.parseInt(arguments.get("-chunkSize").get(0))));
 
         // Create server socket
         ServerSocket serverSocket = null;
