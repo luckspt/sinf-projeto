@@ -14,10 +14,13 @@ public class ClientKeyStore {
     private final String alias;
     private final String aliasKeyPassword;
 
-    public ClientKeyStore(String baseDir, String alias, String keystorePassword, String aliasKeyPassword)  {
+    public ClientKeyStore(String baseDir, String alias, String keystorePassword, String aliasKeyPassword) {
         this.alias = alias;
         this.aliasKeyPassword = aliasKeyPassword;
-        File file = new IO("ClientKeyStore").openFile(baseDir, String.format("keystore.%sCloud", alias), true);
+        File file = new File(baseDir, String.format("keystore.%sCloud", alias));
+        if (!file.exists())
+            new IO("ClientKeyStore").errorAndExit("File " + file.getName() + " does not exist (" + file.getAbsolutePath() + ")");
+
         KeyStore keyStore = null;
         try {
             FileInputStream fileInputStream = new FileInputStream(file);

@@ -62,12 +62,4 @@ public class IO {
     public void printMessage(String name, String message) {
         System.out.println("[" + name + "] " + message);
     }
-
-    public File openFile(String baseDir, String path, boolean exitIfNotExists) {
-        File file = new File(baseDir, path);
-        if (exitIfNotExists && !file.exists())
-            errorAndExit("File " + path + " does not exist (" + file.getAbsolutePath() + ")");
-
-        return file;
-    }
 }

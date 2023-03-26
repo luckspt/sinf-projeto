@@ -25,7 +25,7 @@ public class ServerThread extends Thread {
 
             String commandName = command.split(" ")[0];
             String fileName = command.split(" ")[1];
-            File file = io.openFile(myCloudServer.getBaseDir(), fileName, false);
+            File file = new File(myCloudServer.getBaseDir(), fileName);
 
             io.printMessage("New request:\n---- Command: " + commandName + "\n---- File   : " + file.getAbsolutePath() + "\n---- Exists : " + file.exists());
 
@@ -62,7 +62,9 @@ public class ServerThread extends Thread {
     }
 
     private void deleteFile(File file) {
-        cloudSocket.sendBool(file.delete());
+        if (file.exists()) {
+            file.delete();
+        }
     }
 
     private void downloadFile(File file) throws FileNotFoundException {
