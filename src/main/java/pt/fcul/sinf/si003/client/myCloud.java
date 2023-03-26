@@ -9,7 +9,6 @@ import javax.crypto.SecretKey;
 import java.io.*;
 import java.security.*;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,10 +32,18 @@ public class myCloud {
         return baseDir;
     }
 
-    public static void main(String[] args) throws NoSuchAlgorithmException, IOException, CertificateException, KeyStoreException, UnrecoverableKeyException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, SignatureException {
+    /**
+     * Run the client
+     * @param args The arguments
+     */
+    public static void main(String[] args) {
         asymmetric = new Asymmetric("RSA", 2048);
-        symmetric = new Symmetric("AES", 128);
-        signature = new Sign("SHA256withRSA");
+        try {
+            symmetric = new Symmetric("AES", 128);
+            signature = new Sign("SHA256withRSA");
+        } catch (NoSuchAlgorithmException e) {
+            // this never happens
+        }
 
         // Check arguments
         Map<String, List<String>> arguments = io.parseArguments(args);
@@ -162,10 +169,14 @@ public class myCloud {
             }
         }
 
-        cloudSocket.close();
+        try {
+            cloudSocket.close();
+        } catch (IOException e) {
+            io.errorAndExit("Could not close connection to server: " + e.getMessage());
+        }
     }
 
-    private static void downloadAndDecipherFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws IOException, UnrecoverableKeyException, NoSuchPaddingException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    private static void downloadAndDecipherFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws UnrecoverableKeyException, NoSuchPaddingException, IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
         // Establish priority:
         // 1. Secure
         // 2. Signed
@@ -226,7 +237,7 @@ public class myCloud {
         fileOutputStream.close();
     }
 
-    private static void verifyFile(File file) throws KeyStoreException, NoSuchAlgorithmException, IOException, SignatureException, InvalidKeyException {
+    private static void verifyFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
         // Download the signature
         File signatureFile = new File(getBaseDir(), file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
         ByteArrayOutputStream signatureOutputStream = new ByteArrayOutputStream();
@@ -257,7 +268,7 @@ public class myCloud {
      *
      * @param file The file to encrypt
      */
-    private static void hybridEncryption(File file, FileExtensions cipheredExtension) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
+    private static void hybridEncryption(File file, FileExtensions cipheredExtension) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
         String cipheredFileName = file.getName() + cipheredExtension.getExtensionWithDot();
 
         // Create the streams
@@ -332,7 +343,7 @@ public class myCloud {
      * @throws InvalidKeyException       If the key used to initialize the signature is invalid
      */
 
-    private static void signFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException, SignatureException, InvalidKeyException {
+    private static void signFile(File file) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, SignatureException, InvalidKeyException {
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);

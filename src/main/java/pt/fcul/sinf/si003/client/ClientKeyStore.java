@@ -14,13 +14,20 @@ public class ClientKeyStore {
     private final String alias;
     private final String aliasKeyPassword;
 
-    public ClientKeyStore(String baseDir, String alias, String keystorePassword, String aliasKeyPassword) throws KeyStoreException, IOException, CertificateException, NoSuchAlgorithmException {
+    public ClientKeyStore(String baseDir, String alias, String keystorePassword, String aliasKeyPassword)  {
         this.alias = alias;
         this.aliasKeyPassword = aliasKeyPassword;
         File file = new IO("ClientKeyStore").openFile(baseDir, String.format("keystore.%sCloud", alias), true);
-        FileInputStream fileInputStream = new FileInputStream(file);
-        this.keyStore = KeyStore.getInstance("PKCS12");
-        this.keyStore.load(fileInputStream, keystorePassword.toCharArray());
+        KeyStore keyStore = null;
+        try {
+            FileInputStream fileInputStream = new FileInputStream(file);
+            keyStore = KeyStore.getInstance("PKCS12");
+            keyStore.load(fileInputStream, keystorePassword.toCharArray());
+        } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException e) {
+            // this never happens
+        } finally {
+            this.keyStore = keyStore;
+        }
     }
 
     public Key getKey(String key, String password) throws UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException {

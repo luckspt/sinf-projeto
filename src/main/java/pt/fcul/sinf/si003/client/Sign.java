@@ -8,7 +8,7 @@ import java.security.cert.Certificate;
 public class Sign {
     private final String algorithm;
 
-    public Sign(String algorithm) throws NoSuchAlgorithmException {
+    public Sign(String algorithm) {
         this.algorithm = algorithm;
     }
 
@@ -43,9 +43,9 @@ public class Sign {
 
     }
 
-    public boolean verify(byte[] data, InputStream signatureStream, Certificate certificate) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+    public boolean verify(byte[] data, InputStream signatureStream, Certificate certificate) throws NoSuchAlgorithmException, InvalidKeyException {
         Signature newSignature = Signature.getInstance(algorithm);
-        newSignature.initVerify((Certificate) certificate);
+        newSignature.initVerify(certificate);
 
         try {
             // newSignature.read(signatureStream);
@@ -57,7 +57,7 @@ public class Sign {
             }
 
             return newSignature.verify(data);
-        } catch (IOException e) {
+        } catch (IOException | SignatureException e) {
             throw new RuntimeException(e);
         }
     }
