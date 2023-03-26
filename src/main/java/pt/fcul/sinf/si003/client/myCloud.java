@@ -250,11 +250,6 @@ public class myCloud {
     }
 
     private static void downloadFile(File file, OutputStream outputStream) throws IOException {
-        // Check if the file exists locally
-        if (file.exists()) {
-            throw new IOException("File " + file.getName() + " already exists locally");
-        }
-
         // Check if the file exists in the server
         cloudSocket.sendString("exists " + file.getName());
         if (!cloudSocket.receiveBool()) {
@@ -282,14 +277,13 @@ public class myCloud {
         // Create the streams
         // Create a temporary file to store the file
         FileOutputStream fileOutputStream = new FileOutputStream(file);
-        BufferedOutputStream fileBufferedOutputStream = new BufferedOutputStream(fileOutputStream);
 
         // Download related file (signature or wrapped key) to memory (it's less than 1MB)
         ByteArrayOutputStream relatedFileOutputStream = new ByteArrayOutputStream();
         downloadFile(new File(getBaseDir(), getRelatedFile(fileName, fileExtension)), relatedFileOutputStream);
 
         // Download actual file
-        downloadFile(file, fileBufferedOutputStream);
+        downloadFile(file, fileOutputStream);
 
         // Read the temporary file
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -299,10 +293,16 @@ public class myCloud {
         File outputFile = new File(getBaseDir(), fileName);
         FileOutputStream outputFileOutputStream = new FileOutputStream(outputFile);
 
+        boolean deleteActualFile = false;
         switch (fileExtension) {
             // If the file is encrypted with hybrid encryption
             case "cifrado":
-                decipherHybridEncryption(fileBufferedInputStream, relatedFileOutputStream, outputFileOutputStream);
+                try {
+                    decipherHybridEncryption(fileBufferedInputStream, relatedFileOutputStream, outputFileOutputStream);
+                } catch (InvalidKeyException invalidKeyException) {
+                    io.error("Invalid key! Are you sure you ciphered with the inverse key?");
+                    deleteActualFile = true;
+                }
                 break;
             // If the file is signed
             case "assinado":
@@ -312,6 +312,7 @@ public class myCloud {
                 } catch (SignatureException e) {
                     // TODO Auto-generated catch block
                     e.printStackTrace();
+                    deleteActualFile = true;
                 }
                 break;
             // If the file is encrypted with hybrid encryption and signed
@@ -319,17 +320,22 @@ public class myCloud {
                 break;
             default:
                 io.errorAndExit("Invalid file extension");
+                deleteActualFile = true;
+                break;
         }
 
         // Close the streams
         outputFileOutputStream.close();
         fileBufferedInputStream.close();
         fileInputStream.close();
-        fileBufferedOutputStream.close();
         fileOutputStream.close();
 
         // Delete the temporary file
-        // file.delete();
+        file.delete();
+
+        // Delete the actual file in case of errors
+        if (deleteActualFile)
+            outputFile.delete();
     }
 
     private static void verifySignature(InputStream fileStream, ByteArrayOutputStream signatureStream) throws KeyStoreException, IOException, InvalidKeyException, NoSuchAlgorithmException, SignatureException {
