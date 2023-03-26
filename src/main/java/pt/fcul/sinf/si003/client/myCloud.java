@@ -32,6 +32,10 @@ public class myCloud {
         return baseDir;
     }
 
+    private static boolean isAMethod(String method) {
+        return method.equals("c") || method.equals("s") || method.equals("e") || method.equals("g") || method.equals("x");
+    }
+
     /**
      * Run the client
      * @param args The arguments
@@ -55,7 +59,7 @@ public class myCloud {
         // Only allow one method (one of -c, -s, -e, -g), because they are mutually exclusive
         String method = null;
         for (String key : arguments.keySet()) {
-            if (key.equals("c") || key.equals("s") || key.equals("e") || key.equals("g")) {
+            if (isAMethod(key)) {
                 if (method != null)
                     io.errorAndExit("There must be at most one method (one of -c, -s, -e, -g)");
                 method = key;
@@ -103,7 +107,7 @@ public class myCloud {
         // Execute the method
         for (String fileName : fileNames) {
             // Validate file existence locally, only if it's not a download
-            File file = io.openFile(getBaseDir(), fileName, false);
+            File file = new File(getBaseDir(), fileName);
             if (!method.equals("g") && !file.exists()) {
                 io.error("File " + fileName + " does not exist locally.");
                 continue;
@@ -116,7 +120,7 @@ public class myCloud {
 
             // If it's a download, check if the file exists on the server
             //  ciphered, signed, or secure are mutually exclusive
-            if (!method.equals("g") && (cipheredExists || signedExists || secureExists)) {
+            if ((!method.equals("g") && !method.equals("x")) && (cipheredExists || signedExists || secureExists)) {
                 io.error("File " + fileName + " already exists on the server");
                 continue;
             }
@@ -159,6 +163,14 @@ public class myCloud {
 
                         downloadAndDecipherFile(file, cipheredExists, signedExists, secureExists);
                         break;
+                    case "x":
+                        if (!cipheredExists && !signedExists && !secureExists) {
+                            io.error("File " + fileName + " does not exist on the server");
+                            continue;
+                        }
+
+                        deleteFile(file, cipheredExists, signedExists, secureExists);
+                        break;
                     default:
                         io.errorAndExit("Invalid method");
                 }
@@ -196,6 +208,24 @@ public class myCloud {
             verifyFile(file);
         }  else if (cipheredExists)
             decipherHybridEncryption(file, FileExtensions.CIFRADO);
+    }
+
+    private static void deleteFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) {
+        // Establish priority:
+        // 1. Secure
+        // 2. Signed
+        // 3. Ciphered
+        if (secureExists) {
+            cloudSocket.sendString("delete " + file.getName() + FileExtensions.SEGURO.getExtensionWithDot());
+            cloudSocket.sendString("delete " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
+            cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
+        } else if (signedExists) {
+            cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
+            cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
+        }  else if (cipheredExists) {
+            cloudSocket.sendString("delete " + file.getName() + FileExtensions.CIFRADO.getExtensionWithDot());
+            cloudSocket.sendString("delete " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
+        }
     }
 
     private static void decipherHybridEncryption(File file, FileExtensions cifrado) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {

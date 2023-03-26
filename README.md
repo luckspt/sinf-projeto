@@ -41,15 +41,17 @@ Para além destes, deve receber um e apenas um dos seguintes argumentos:
 - `-s {ficheiros}+` - Assina os ficheiros (assinatura digital) e envia-os para o servidor.
 - `-e {ficheiros}+` - Assina os ficheiros (assinatura digital), cifra os ficheiros (cifra híbrida), e envia-os para o servidor. 
 - `-g {ficheiros}+` - Recebe e guarda os ficheiros do servidor. Os ficheiros cifrados são decifrados, e os ficheiros assinados são verificados.
+- `-x {ficheiros}+` - Elimina os ficheiros do servidor.
 
 Onde `{ficheiros}+` é uma lista de ficheiros separados por espaço. Os ficheiros são relativos à diretoria base do cliente.
 
 ## Geração de ficheiros
-Para facilitar o teste do projeto, foram gerados ficheiros de tamanho variável.
+Para facilitar o teste do projeto com ficheiros grandes, foi alocado o espaço necessário para o ficheiro,
+seguido da escrita (*attach*) de um conteúdo conhecido para que se possa verificar que a decifra e validação estão corretas. 
 
-Isto pode ser feito através do comando `truncate -s {tamanho} {ficheiro}`.
+Isto pode ser feito através do comando `fallocate -l {tamanho} {ficheiro}` seguido de `echo "{conteudo}" >> {ficheiro}`.
 
-Por exemplo, para gerar um ficheiro de 3GB: `truncate -s 3G 3GB.txt`.
+Por exemplo, para gerar um ficheiro de 3GB: `fallocate -l 3G 3GB.txt; echo "twix o cao" >> 3GB.txt`.
 
 
 ## Alguns extras implementados
@@ -64,3 +66,5 @@ Por exemplo, para gerar um ficheiro de 3GB: `truncate -s 3G 3GB.txt`.
   - Por defeito, a porta é `3000`.
 - O cliente e o servidor suportam a definição do tamanho do _buffer_ de leitura/escrita.
   - Por defeito, o tamanho do _buffer_ é 1024 bytes. É sugerido o tamanho de 65535 bytes por ser este o valor do _window size_ do _tcp_.
+- O servidor responde a comandos/mensagens do servidor, permitindo assim escalar a quantidade de pedidos disponíveis
+  - Atualmente existem os comandso `exists`, `upload`, `download`, e `delete`. O último não tem implementação no cliente.
