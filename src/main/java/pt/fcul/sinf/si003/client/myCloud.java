@@ -158,7 +158,7 @@ public class myCloud {
                         // Send the signed file to the server
                         io.info("Sending signed file to server...");
                         cloudSocket.sendString("upload " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
-                        cloudSocket.sendStream((int) file.length(), signedFileBufferedInputStream);
+                        cloudSocket.sendStream(file.length(), signedFileBufferedInputStream);
 
                         // Close signed file input stream
                         signedFileBufferedInputStream.close();
@@ -396,7 +396,7 @@ public class myCloud {
         // Send the encrypted file to the server
         io.info("Sending encrypted file to server...");
         cloudSocket.sendString("upload " + cipheredFileName);
-        cloudSocket.sendStream((int) encryptedFile.length(), encryptedFileBufferedInputStream);
+        cloudSocket.sendStream(encryptedFile.length(), encryptedFileBufferedInputStream);
 
         // Close file input stream and delete the temporary file
         encryptedFileBufferedInputStream.close();
@@ -414,7 +414,7 @@ public class myCloud {
         // Send the wrapped key to the server
         io.info("Sending wrapped key to server...");
         cloudSocket.sendString("upload " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
-        cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
+        cloudSocket.sendStream((long) wrappedKey.length, new ByteArrayInputStream(wrappedKey));
     }
 
     /**
@@ -444,7 +444,7 @@ public class myCloud {
         // Send the signature to the server
         io.info("Sending signature to server...");
         cloudSocket.sendString("upload " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
-        cloudSocket.sendStream(signatureData.length, signatureInputStream);
+        cloudSocket.sendStream((long) signatureData.length, signatureInputStream);
 
         // Close signature input stream
         signatureInputStream.close();
