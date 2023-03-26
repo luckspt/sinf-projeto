@@ -17,7 +17,7 @@ public class CloudSocket {
     /**
      * The size of the chunks used to send streams
      */
-    private final int CHUNK_SIZE = 1024;
+    private int chunkSize;
 
     /**
      * The ObjectInputStream
@@ -60,18 +60,20 @@ public class CloudSocket {
      * @param port Port
      * @throws IOException If an error occurs
      */
-    public CloudSocket(String host, int port) throws IOException {
-        this(new Socket(host, port));
+    public CloudSocket(String host, int port, int chunkSize) throws IOException {
+        this(new Socket(host, port), chunkSize);
     }
 
     /**
      * Create a new CloudSocket from a socket
      *
      * @param socket Socket to use
+     * @param chunkSize Size of the chunks in bytes
      * @throws IOException If an error occurs
      */
-    public CloudSocket(Socket socket) throws IOException {
+    public CloudSocket(Socket socket, int chunkSize) throws IOException {
         this.socket = socket;
+        this.chunkSize = chunkSize;
     }
 
     /**
@@ -128,12 +130,12 @@ public class CloudSocket {
             this.sendInt(length);
 
             // Buffer of chunkSize bytes
-            byte[] buffer = new byte[CHUNK_SIZE];
+            byte[] buffer = new byte[chunkSize];
 
             // Send the file in chunks of CHUNK_SIZE bytes, until the end
             do {
                 // Read chunkSize bytes from the file
-                int bytesRead = inputStream.read(buffer, 0, Math.min(CHUNK_SIZE, length));
+                int bytesRead = inputStream.read(buffer, 0, Math.min(chunkSize, length));
                 // EOF
                 if (bytesRead <= 0) {
                     break;
@@ -206,12 +208,12 @@ public class CloudSocket {
             int length = this.receiveInt();
 
             // Buffer of chunkSize bytes
-            byte[] buffer = new byte[CHUNK_SIZE];
+            byte[] buffer = new byte[chunkSize];
 
             // Receive the file in chunks of chunkSize bytes, until the end
             do {
                 // Read chunkSize bytes from the socket
-                int bytesRead = this.receiveBytes(buffer, Math.min(CHUNK_SIZE, length));
+                int bytesRead = this.receiveBytes(buffer, Math.min(chunkSize, length));
 
                 // EOF
                 if (bytesRead == -1) {

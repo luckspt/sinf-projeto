@@ -75,6 +75,5 @@ public class ServerThread extends Thread {
         FileOutputStream fileOutputStream = new FileOutputStream(file);
         cloudSocket.receiveStream(fileOutputStream);
         fileOutputStream.close();
-        // TODO: send confirmation to client?
     }
 }

@@ -77,11 +77,17 @@ public class myCloud {
         List<String> fileNames = new ArrayList<>(new HashSet<>(arguments.get(method)));
         validateFileNames(fileNames);
 
+        // EXTRA: chunk size
+        int chunkSize = 1024;
+        if (arguments.containsKey("-chunkSize") && arguments.get("-chunkSize").size() == 1 && arguments.get("-chunkSize").get(0).matches("^[0-9]+$"))
+            chunkSize = Math.max(1024, Integer.parseInt(arguments.get("-chunkSize").get(0)));
+
+        io.error("Chunk size: " + chunkSize);
         // Connect to server
         String[] serverAddressSplit = serverAddress.split(":");
         try {
             io.printMessage("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
-            cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
+            cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]), chunkSize);
             io.printMessage("Connected to server " + cloudSocket.getRemoteAddress());
         } catch (IOException e) {
             io.errorAndExit("Could not connect to server: " + e.getMessage());
@@ -91,7 +97,7 @@ public class myCloud {
         for (String fileName : fileNames) {
             // Validate file existence locally, only if it's not a download
             File file = io.openFile(getBaseDir(), fileName, false);
-            if (!file.exists()) {
+            if (!method.equals("g") && !file.exists()) {
                 io.error("File " + fileName + " does not exist locally.");
                 continue;
             }
@@ -113,7 +119,7 @@ public class myCloud {
                     case "c":
                         // Hybrid encryption
                         io.printMessage("Performing hybrid encryption on file " + fileName + "...");
-                        hybridEncryption(file);
+                        hybridEncryption(file, "cifrado");
                         break;
                     case "s":
                         io.printMessage("Signing file " + fileName + "...");
@@ -121,11 +127,12 @@ public class myCloud {
                         break;
                     case "e":
                         io.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
-                        // TODO: using hybrid encryption and sign file
+                        signFile(file);
+                        hybridEncryption(file, "seguro");
                         break;
                     case "g":
                         if (!cipheredExists && !signedExists && !secureExists) {
-                            io.printMessage("File " + fileName + " does not exist on the server");
+                            io.error("File " + fileName + " does not exist on the server");
                             continue;
                         }
 
@@ -145,15 +152,25 @@ public class myCloud {
     }
 
     private static void downloadAndDecipherFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws IOException, UnrecoverableKeyException, NoSuchPaddingException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        if (cipheredExists)
+        // Establish priority:
+        // 1. Secure
+        // 2. Signed
+        // 3. Ciphered
+        if (secureExists) {
+            decipherHybridEncryption(file, "seguro");
+            verifyFile(file);
+        } else if (signedExists) {
+            // We need to download the signed file first, because verifyFile() will read from disk
+            // Download the signed file
+            FileOutputStream signedOutputStream = new FileOutputStream(file);
+            downloadFile(new File(getBaseDir(), file.getName() + ".assinado"), signedOutputStream);
+
+            // Close signed output file stream
+            signedOutputStream.close();
+
+            verifyFile(file);
+        } else if (cipheredExists)
             decipherHybridEncryption(file, "cifrado");
-        else if (signedExists)
-            verifyFile(file, "assinado");
-        // else if (secureExists) {
-        // decipherHybridEncryption(file, "seguro");
-        // verifyFile(file);
-        // } else
-        // io.error("File " + file.getName() + " does not exist on the server");
     }
 
     private static void decipherHybridEncryption(File file, String cipheredExtension) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
@@ -195,18 +212,11 @@ public class myCloud {
         fileOutputStream.close();
     }
 
-    private static void verifyFile(File file, String signedExtension) throws KeyStoreException, NoSuchAlgorithmException, IOException, SignatureException, InvalidKeyException {
+    private static void verifyFile(File file) throws KeyStoreException, NoSuchAlgorithmException, IOException, SignatureException, InvalidKeyException {
         // Download the signature
         File signatureFile = new File(getBaseDir(), file.getName() + ".assinatura");
         ByteArrayOutputStream signatureOutputStream = new ByteArrayOutputStream();
         downloadFile(signatureFile, signatureOutputStream);
-
-        // Download the signed file
-        FileOutputStream signedOutputStream = new FileOutputStream(file);
-        downloadFile(new File(getBaseDir(), file.getName() + "." + signedExtension), signedOutputStream);
-
-        // Close signed output file stream
-        signedOutputStream.close();
 
         FileInputStream signedInputStream = new FileInputStream(file);
         BufferedInputStream bufferedSignedInputStream = new BufferedInputStream(signedInputStream);
@@ -234,8 +244,8 @@ public class myCloud {
      *
      * @param file The file to encrypt
      */
-    private static void hybridEncryption(File file) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
-        String cipheredFileName = file.getName() + ".cifrado";
+    private static void hybridEncryption(File file, String cipheredExtension) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
+        String cipheredFileName = file.getName() + "." + cipheredExtension;
 
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
@@ -336,6 +346,7 @@ public class myCloud {
         // Close signature input stream
         signatureInputStream.close();
 
+        // TODO: extract this to a method so that sign only signs and sends the signature
         // Read the signed file
         FileInputStream signedFileInputStream = new FileInputStream(file);
         BufferedInputStream signedFileBufferedInputStream = new BufferedInputStream(signedFileInputStream);

@@ -32,9 +32,9 @@ Para executar o cliente, basta executar o _shell script_ `myCloud.sh` na raiz do
 O cliente recebe os seguintes argumentos, sem ordem:
 - `-a {endereco}` (default: `localhost:3000`) - Endereço e porta do servidor
 - `-d {caminho}` (default: `./`) - Diretoria base do cliente
-- `--keyStoreAlias {alias}` (default: `jpp`) - Nome do `alias` a usar para o _keystore_
-- `--keyStorePassword {password}` (default: `123456`) - Password do _keystore_
-- `--keyStoreAliasPassword {password}` (default: `123456`) - Password da _key_ `alias` do _keystore_
+- `--keyStoreAlias {alias}` (default: `jpp`) - Nome do *alias* a usar para o _keystore_
+- `--keyStorePassword {password}` (default: `123456`) - *Password* do _keystore_
+- `--keyStoreAliasPassword {password}` (default: `123456`) - *Password* da _key_ *alias* do _keystore_
 
 Para além destes, deve receber um e apenas um dos seguintes argumentos:
 - `-c {ficheiros}+` - Cifra os ficheiros (cifra híbrida) e envia-os para o servidor.
@@ -43,3 +43,24 @@ Para além destes, deve receber um e apenas um dos seguintes argumentos:
 - `-g {ficheiros}+` - Recebe e guarda os ficheiros do servidor. Os ficheiros cifrados são decifrados, e os ficheiros assinados são verificados.
 
 Onde `{ficheiros}+` é uma lista de ficheiros separados por espaço. Os ficheiros são relativos à diretoria base do cliente.
+
+## Geração de ficheiros
+Para facilitar o teste do projeto, foram gerados ficheiros de tamanho variável.
+
+Isto pode ser feito através do comando `truncate -s {tamanho} {ficheiro}`.
+
+Por exemplo, para gerar um ficheiro de 3GB: `truncate -s 3G 3GB.txt`.
+
+
+## Alguns extras implementados
+- Suporte para ficheiros de tamanho superior a 2GB.
+  - Ao usar `long` em detrimento de `int` para o envio/recepção da quantidade de *bytes* numa *stream*, é possível transferir ficheiros de tamanho igual a 2<sup>63</sup>-1 *bytes* (`8192` *PetaBytes*).
+  - Como os ficheiros são transferidos para disco, o limite reside no espaço disponível no disco, geralmente muito superior à memória.
+- O cliente suporta a definição do *alias* e *password* do *keystore* e *password* do *alias*.
+  - Por defeito os valores são, respontivamente, `jpp`, `123456` e `123456`.
+- O cliente e o servidor suportam a definição da diretoria base dos ficheiros.
+  - Por defeito, a diretoria base é a diretoria atual (definido pelo `java`).
+- O servidor suporta a definição da porta.
+  - Por defeito, a porta é `3000`.
+- O cliente e o servidor suportam a definição do tamanho do _buffer_ de leitura/escrita.
+  - Por defeito, o tamanho do _buffer_ é 1024 bytes. É sugerido o tamanho de 65535 bytes por ser este o valor do _window size_ do _tcp_.
