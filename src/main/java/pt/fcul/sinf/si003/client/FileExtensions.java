@@ -3,7 +3,9 @@ package pt.fcul.sinf.si003.client;
 public enum FileExtensions {
     CIFRADO("cifrado"),
     ASSINADO("assinado"),
-    SEGURO("seguro");
+    SEGURO("seguro"),
+    CHAVE_SECRETA("chave_secreta"),
+    ASSINATURA("assinatura");
 
     private final String extension;
 
