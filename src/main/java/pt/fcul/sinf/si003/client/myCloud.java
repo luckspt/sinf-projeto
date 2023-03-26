@@ -21,7 +21,7 @@ import java.util.Map;
 public class myCloud {
 
     private static CloudSocket cloudSocket;
-    private static final IO io = new IO("Client");
+    private static final IO io = new IO();
     private static ClientKeyStore clientKeyStore;
     private static Asymmetric asymmetric;
     private static Symmetric symmetric;
@@ -96,9 +96,9 @@ public class myCloud {
         // Connect to server
         String[] serverAddressSplit = serverAddress.split(":");
         try {
-            io.printMessage("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
+            io.info("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
             cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]), chunkSize);
-            io.printMessage("Connected to server " + cloudSocket.getRemoteAddress());
+            io.info("Connected to server " + cloudSocket.getRemoteAddress());
         } catch (IOException e) {
             io.errorAndExit("Could not connect to server: " + e.getMessage());
         }
@@ -128,11 +128,11 @@ public class myCloud {
                 switch (method) {
                     case "c":
                         // Hybrid encryption
-                        io.printMessage("Performing hybrid encryption on file " + fileName + "...");
+                        io.info("Performing hybrid encryption on file " + fileName + "...");
                         hybridEncryption(file, FileExtensions.CIFRADO);
                         break;
                     case "s":
-                        io.printMessage("Signing file " + fileName + "...");
+                        io.info("Signing file " + fileName + "...");
                         signFile(file);
 
                         // Send signed file to server
@@ -141,7 +141,7 @@ public class myCloud {
                         BufferedInputStream signedFileBufferedInputStream = new BufferedInputStream(signedFileInputStream);
 
                         // Send the signed file to the server
-                        io.printMessage("Sending signed file to server...");
+                        io.info("Sending signed file to server...");
                         cloudSocket.sendString("upload " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
                         cloudSocket.sendStream((int) file.length(), signedFileBufferedInputStream);
 
@@ -150,7 +150,7 @@ public class myCloud {
                         signedFileInputStream.close();
                         break;
                     case "e":
-                        io.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
+                        io.info("Performing hybrid encryption and signing file " + fileName + "...");
                         signFile(file);
                         hybridEncryption(file, FileExtensions.SEGURO);
                         break;
@@ -234,10 +234,10 @@ public class myCloud {
         downloadFile(wrappedKeyFile, wrappedKeyOutputStream);
 
         // Unwrap the symmetric key
-        io.printMessage("Unwrapping symmetric key...");
+        io.info("Unwrapping symmetric key...");
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
         SecretKey symmetricKey = (SecretKey) asymmetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
-        io.printMessage("Symmetric key unwrapped!");
+        io.info("Symmetric key unwrapped!");
 
         // Close wrapped key stream
         wrappedKeyOutputStream.close();
@@ -255,9 +255,9 @@ public class myCloud {
         BufferedInputStream bufferedCipheredInputStream = new BufferedInputStream(cipheredInputStream);
         FileOutputStream fileOutputStream = new FileOutputStream(file);
 
-        io.printMessage("Deciphering " + file.getName() + " with AES 128...");
+        io.info("Deciphering " + file.getName() + " with AES 128...");
         symmetric.decrypt(symmetricKey, bufferedCipheredInputStream, fileOutputStream);
-        io.printMessage(file.getName() + " deciphered!");
+        io.info(file.getName() + " deciphered!");
 
         // Close the streams and delete the temporary file
         bufferedCipheredInputStream.close();
@@ -287,9 +287,9 @@ public class myCloud {
         signedInputStream.close();
 
         if (valid)
-            io.printMessage("Signature is valid!");
+            io.info("Signature is valid!");
         else
-            io.error("Signature is not valid!");
+            io.warning("Signature is not valid!");
     }
 
     /**
@@ -308,7 +308,7 @@ public class myCloud {
         FileOutputStream encryptedFileOutputBuffer = new FileOutputStream(encryptedFile);
 
         // Generate the key and encrypt the file
-        io.printMessage("Encrypting file with AES 128...");
+        io.info("Encrypting file with AES 128...");
         SecretKey symmetricKey = symmetric.generateKey();
         symmetric.encrypt(symmetricKey, bufferedFileStream, encryptedFileOutputBuffer);
 
@@ -322,7 +322,7 @@ public class myCloud {
         BufferedInputStream encryptedFileBufferedInputStream = new BufferedInputStream(encryptedFileInputStream);
 
         // Send the encrypted file to the server
-        io.printMessage("Sending encrypted file to server...");
+        io.info("Sending encrypted file to server...");
         cloudSocket.sendString("upload " + cipheredFileName);
         cloudSocket.sendStream((int) encryptedFile.length(), encryptedFileBufferedInputStream);
 
@@ -336,11 +336,11 @@ public class myCloud {
         PublicKey publicKey = certificate.getPublicKey();
 
         // Wrap the symmetric key with the public key
-        io.printMessage("Wrapping symmetric key with public key...");
+        io.info("Wrapping symmetric key with public key...");
         byte[] wrappedKey = asymmetric.wrapKey(symmetricKey, publicKey);
 
         // Send the wrapped key to the server
-        io.printMessage("Sending wrapped key to server...");
+        io.info("Sending wrapped key to server...");
         cloudSocket.sendString("upload " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
         cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
     }
@@ -381,7 +381,7 @@ public class myCloud {
         PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
 
         // Sign file
-        io.printMessage("Signing file with SHA256withRSA...");
+        io.info("Signing file with SHA256withRSA...");
         byte[] signatureData = signature.sign(bufferedInputStream, privateKey);
 
         // Close file input stream
@@ -392,7 +392,7 @@ public class myCloud {
         ByteArrayInputStream signatureInputStream = new ByteArrayInputStream(signatureData);
 
         // Send the signature to the server
-        io.printMessage("Sending signature to server...");
+        io.info("Sending signature to server...");
         cloudSocket.sendString("upload " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
         cloudSocket.sendStream(signatureData.length, signatureInputStream);
 
@@ -408,10 +408,10 @@ public class myCloud {
         }
 
         // Download file to the output stream
-        io.printMessage("Downloading file " + file.getName() + "...");
+        io.info("Downloading file " + file.getName() + "...");
         cloudSocket.sendString("download " + file.getName());
         cloudSocket.receiveStream(outputStream);
-        io.printMessage("File " + file.getName() + " downloaded!");
+        io.info("File " + file.getName() + " downloaded!");
     }
 
     /**

@@ -7,11 +7,9 @@ import java.security.*;
 
 public class Asymmetric {
     private final String algorithm;
-    private final int keySize;
 
     public Asymmetric(String transformation, int keySize) {
         this.algorithm = transformation;
-        this.keySize = keySize;
     }
 
     public byte[] wrapKey(Key key, PublicKey publicKey) throws InvalidKeyException, IllegalBlockSizeException, NoSuchPaddingException, NoSuchAlgorithmException {

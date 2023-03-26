@@ -7,7 +7,7 @@ import java.io.*;
 
 public class ServerThread extends Thread {
     private final CloudSocket cloudSocket;
-    private final IO io = new IO("ServerThread");
+    private final IO io = new IO();
 
     public ServerThread(CloudSocket cloudSocket) {
         this.cloudSocket = cloudSocket;
@@ -19,7 +19,7 @@ public class ServerThread extends Thread {
             String command = cloudSocket.receiveString();
             // Check if connection was closed
             if (command == null || command.isEmpty()) {
-                io.printMessage(cloudSocket.getRemoteAddress() + " disconnected");
+                io.info(cloudSocket.getRemoteAddress() + " disconnected");
                 break;
             }
 
@@ -27,7 +27,7 @@ public class ServerThread extends Thread {
             String fileName = command.split(" ")[1];
             File file = new File(myCloudServer.getBaseDir(), fileName);
 
-            io.printMessage("New request:\n---- Command: " + commandName + "\n---- File   : " + file.getAbsolutePath() + "\n---- Exists : " + file.exists());
+            io.info("New request:\n---- Command: " + commandName + "\n---- File   : " + file.getAbsolutePath() + "\n---- Exists : " + file.exists());
 
             switch (commandName) {
                 case "exists":

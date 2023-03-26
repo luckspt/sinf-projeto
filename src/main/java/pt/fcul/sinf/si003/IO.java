@@ -8,13 +8,16 @@ import java.util.List;
 import java.util.Map;
 
 public class IO {
-    private final String name;
-    public IO (String name) {
-        this.name = name;
+    public void error(String message) {
+        printMessage( Color.RED_BOLD + "ERROR" + Color.RESET, Color.WHITE_UNDERLINED + message + Color.RESET);
     }
 
-    public void error(String message) {
-        printMessage( Color.RED_BOLD + this.name + " ERROR" + Color.RESET, Color.WHITE_UNDERLINED + message + Color.RESET);
+    public void info(String message) {
+        printMessage( Color.BLUE_BOLD + "INFO" + Color.RESET, message);
+    }
+
+    public void warning(String message) {
+        printMessage( Color.YELLOW_BOLD + "WARNING" + Color.RESET, Color.WHITE_UNDERLINED + message + Color.RESET);
     }
 
     /**
@@ -55,11 +58,11 @@ public class IO {
         return params;
     }
 
-    public void printMessage(String message) {
-        System.out.println("[" + this.name + "] " + message);
-    }
-
     public void printMessage(String name, String message) {
         System.out.println("[" + name + "] " + message);
+    }
+
+    public void printMessage(String message) {
+        System.out.println(message);
     }
 }

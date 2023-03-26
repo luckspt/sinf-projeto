@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public class myCloudServer {
-    private final static IO io = new IO("Server");
+    private final static IO io = new IO();
     private static String baseDir = "./";
 
     public static String getBaseDir() {
@@ -48,7 +48,7 @@ public class myCloudServer {
         ServerSocket serverSocket = null;
         try {
             serverSocket = new ServerSocket(port);
-            io.printMessage("Server started on 0.0.0.0:" + port);
+            io.info("Server started on 0.0.0.0:" + port);
         } catch (IOException e) {
             io.errorAndExit("Could not start server socket: " + e.getMessage());
         }
@@ -56,9 +56,9 @@ public class myCloudServer {
         while (true) {
             try {
                 // Wait for connection
-                io.printMessage("Waiting for connections...");
+                io.info("Waiting for connections...");
                 Socket clientSocket = serverSocket.accept();
-                io.printMessage("Connection established with " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
+                io.info("Connection established with " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
 
                 // Create a new thread for the connection
                 CloudSocket cloudSocket = new CloudSocket(clientSocket, chunkSize);

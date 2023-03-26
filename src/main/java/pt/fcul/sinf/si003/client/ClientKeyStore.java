@@ -19,7 +19,7 @@ public class ClientKeyStore {
         this.aliasKeyPassword = aliasKeyPassword;
         File file = new File(baseDir, String.format("keystore.%sCloud", alias));
         if (!file.exists())
-            new IO("ClientKeyStore").errorAndExit("File " + file.getName() + " does not exist (" + file.getAbsolutePath() + ")");
+            new IO().errorAndExit("File " + file.getName() + " does not exist (" + file.getAbsolutePath() + ")");
 
         KeyStore keyStore = null;
         try {
