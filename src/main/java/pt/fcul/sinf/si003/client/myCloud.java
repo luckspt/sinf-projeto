@@ -82,7 +82,6 @@ public class myCloud {
         if (arguments.containsKey("-chunkSize") && arguments.get("-chunkSize").size() == 1 && arguments.get("-chunkSize").get(0).matches("^[0-9]+$"))
             chunkSize = Math.max(1024, Integer.parseInt(arguments.get("-chunkSize").get(0)));
 
-        io.error("Chunk size: " + chunkSize);
         // Connect to server
         String[] serverAddressSplit = serverAddress.split(":");
         try {

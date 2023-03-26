@@ -25,6 +25,7 @@ Para executar o servidor, basta executar o _shell script_ `myCloudServer.sh` na 
 O servidor recebe os seguintes argumentos, sem ordem:
 - `-p {porta}` (default: `3000`) - Porta do servidor
 - `-d {diretoria}` (default: `./`) - Diretoria base dos ficheiros do servidor
+- `--chunkSize {tamanho}` (default: `1024`) - Tamanho do _buffer_ de leitura/escrita de *streams*
 
 ### Cliente
 Para executar o cliente, basta executar o _shell script_ `myCloud.sh` na raiz do projeto.
@@ -35,6 +36,7 @@ O cliente recebe os seguintes argumentos, sem ordem:
 - `--keyStoreAlias {alias}` (default: `jpp`) - Nome do *alias* a usar para o _keystore_
 - `--keyStorePassword {password}` (default: `123456`) - *Password* do _keystore_
 - `--keyStoreAliasPassword {password}` (default: `123456`) - *Password* da _key_ *alias* do _keystore_
+- `--chunkSize {tamanho}` (default: `1024`) - Tamanho do _buffer_ de leitura/escrita de *streams*
 
 Para além destes, deve receber um e apenas um dos seguintes argumentos:
 - `-c {ficheiros}+` - Cifra os ficheiros (cifra híbrida) e envia-os para o servidor.
