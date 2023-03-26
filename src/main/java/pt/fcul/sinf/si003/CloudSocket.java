@@ -67,7 +67,7 @@ public class CloudSocket {
     /**
      * Create a new CloudSocket from a socket
      *
-     * @param socket Socket to use
+     * @param socket    Socket to use
      * @param chunkSize Size of the chunks in bytes
      * @throws IOException If an error occurs
      */
@@ -172,6 +172,11 @@ public class CloudSocket {
         socket.close();
     }
 
+    /**
+     * Receive a string from the socket
+     *
+     * @return The string received
+     */
     public String receiveString() {
         try {
             return (String) getIn().readObject();
@@ -180,6 +185,11 @@ public class CloudSocket {
         }
     }
 
+    /**
+     * Receive an integer from the socket
+     *
+     * @return The integer received
+     */
     public int receiveInt() {
         try {
             return getIn().readInt();
@@ -188,6 +198,11 @@ public class CloudSocket {
         }
     }
 
+    /**
+     * Receive a boolean from the socket
+     *
+     * @return The boolean received
+     */
     public boolean receiveBool() {
         try {
             return getIn().readBoolean();
@@ -245,6 +260,11 @@ public class CloudSocket {
         }
     }
 
+    /**
+     * The remote's address
+     *
+     * @return The remote's address
+     */
     public String getRemoteAddress() {
         return socket.getInetAddress().getHostAddress() + ":" + socket.getPort();
     }

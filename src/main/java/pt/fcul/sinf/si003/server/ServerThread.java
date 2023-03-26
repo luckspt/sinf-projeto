@@ -5,14 +5,30 @@ import pt.fcul.sinf.si003.IO;
 
 import java.io.*;
 
+/**
+ * The server thread.
+ */
 public class ServerThread extends Thread {
+    /**
+     * The socket abstraction
+     */
     private final CloudSocket cloudSocket;
+    /**
+     * The IO abstraction
+     */
     private final IO io = new IO();
 
+    /**
+     * Creates a new instance of ServerThread.
+     * @param cloudSocket the socket abstraction
+     */
     public ServerThread(CloudSocket cloudSocket) {
         this.cloudSocket = cloudSocket;
     }
 
+    /**
+     * Handles the commands.
+     */
     @Override
     public void run() {
         while (true) {
@@ -57,22 +73,40 @@ public class ServerThread extends Thread {
         }
     }
 
+    /**
+     * Checks if a file exists and sends the result to the requester.
+     * @param file the file to be checked
+     */
     private void existsFile(File file) {
         cloudSocket.sendBool(file.exists());
     }
 
+    /**
+     * Deletes a file.
+     * @param file the file do be deleted
+     */
     private void deleteFile(File file) {
         if (file.exists()) {
             file.delete();
         }
     }
 
+    /**
+     * Sends a file to the requester.
+     * @param file the file to be sent
+     * @throws FileNotFoundException if the file does not exist
+     */
     private void downloadFile(File file) throws FileNotFoundException {
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
         cloudSocket.sendStream((int) file.length(), bufferedInputStream);
     }
 
+    /**
+     * Receives a file from the requester.
+     * @param file the file to be received
+     * @throws IOException if an I/O error occurs
+     */
     private void uploadFile(File file) throws IOException {
         FileOutputStream fileOutputStream = new FileOutputStream(file);
         cloudSocket.receiveStream(fileOutputStream);

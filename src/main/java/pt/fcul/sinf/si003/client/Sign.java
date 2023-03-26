@@ -5,26 +5,31 @@ import java.io.InputStream;
 import java.security.*;
 import java.security.cert.Certificate;
 
+/**
+ * The Sign abstraction.
+ */
 public class Sign {
+    /**
+     * The algorithm to use.
+     */
     private final String algorithm;
 
+    /**
+     * Creates a new instance of Sign.
+     *
+     * @param algorithm the algorithm to use
+     */
     public Sign(String algorithm) {
         this.algorithm = algorithm;
     }
 
     /**
-     * Read the input stream and sign it with a signature of the given algorithm and private key.
-     * 
-     * @param inputStream the input stream to sign
-     * @param privateKey the private key to sign the input stream
-     * 
-     * @return the signature of the input stream
+     * Signs a file.
+     *
+     * @param inputStream the file to sign
+     * @param privateKey  the private key to use
      */
-
-
-
     public byte[] sign(InputStream inputStream, PrivateKey privateKey) throws SignatureException, InvalidKeyException, NoSuchAlgorithmException {
-        // recebe o ficheiro e a chave privada => retorna o ficheiro assinado
         Signature signature = Signature.getInstance(algorithm);
         signature.initSign(privateKey);
 
@@ -43,12 +48,19 @@ public class Sign {
 
     }
 
+    /**
+     * Verifies a file.
+     *
+     * @param data            the data to verify
+     * @param signatureStream the signature to verify
+     * @param certificate     the certificate to use
+     * @return true if the signature is valid, false otherwise
+     */
     public boolean verify(byte[] data, InputStream signatureStream, Certificate certificate) throws NoSuchAlgorithmException, InvalidKeyException {
         Signature newSignature = Signature.getInstance(algorithm);
         newSignature.initVerify(certificate);
 
         try {
-            // newSignature.read(signatureStream);
             byte[] buffer = new byte[1024];
 
             int bytesRead;

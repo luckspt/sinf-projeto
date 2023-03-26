@@ -1,5 +1,8 @@
 package pt.fcul.sinf.si003;
 
+/**
+ * The Color enum provides a set of colors to be used in the console
+ */
 public enum Color {
     //Color end string, color reset
     RESET("\033[0m"),
@@ -74,12 +77,23 @@ public enum Color {
     CYAN_BACKGROUND_BRIGHT("\033[0;106m"),      // CYAN
     WHITE_BACKGROUND_BRIGHT("\033[0;107m");     // WHITE
 
+    /**
+     * The code of the color
+     */
     private final String code;
 
+    /**
+     * Creates a new color
+     * @param code The code of the color
+     */
     Color(String code) {
         this.code = code;
     }
 
+    /**
+     * Returns the code of the color
+     * @return The code of the color
+     */
     @Override
     public String toString() {
         return code;

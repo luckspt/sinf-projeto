@@ -9,14 +9,23 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The server.
+ */
 public class myCloudServer {
+    /**
+     * The IO abstraction
+     */
     private final static IO io = new IO();
+    /**
+     * The base directory
+     */
     private static String baseDir = "./";
 
-    public static String getBaseDir() {
-        return baseDir;
-    }
-
+    /**
+     * The main method.
+     * @param args the arguments
+     */
     public static void main(String[] args) {
         // Check arguments
         Map<String, List<String>> arguments = io.parseArguments(args);
@@ -73,5 +82,13 @@ public class myCloudServer {
 
         // Close the socket. This code is unreachable
         // serverSocket.close();
+    }
+
+    /**
+     * Get the base directory
+     * @return the base directory
+     */
+    public static String getBaseDir() {
+        return baseDir;
     }
 }
