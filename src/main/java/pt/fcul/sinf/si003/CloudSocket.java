@@ -91,13 +91,13 @@ public class CloudSocket {
     }
 
     /**
-     * Send an integer
+     * Send a long
      *
-     * @param value Int to send
+     * @param value long to send
      */
-    public void sendInt(int value) {
+    public void sendLong(long value) {
         try {
-            getOut().writeInt(value);
+            getOut().writeLong(value);
             getOut().flush();
         } catch (IOException e) {
             e.printStackTrace();
@@ -124,18 +124,19 @@ public class CloudSocket {
      * @param length      Length of the stream
      * @param inputStream Stream to send
      */
-    public void sendStream(int length, InputStream inputStream) {
+    public void sendStream(long length, InputStream inputStream) {
         try {
             // Send the length of the file
-            this.sendInt(length);
+            this.sendLong(length);
 
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[chunkSize];
 
-            // Send the file in chunks of CHUNK_SIZE bytes, until the end
+            // Send the file in chunks of chunkSize bytes, until the end
             do {
                 // Read chunkSize bytes from the file
-                int bytesRead = inputStream.read(buffer, 0, Math.min(chunkSize, length));
+                // cast is possible because chunkSize is 65535 at most
+                int bytesRead = inputStream.read(buffer, 0, (int)Math.min(chunkSize, length));
                 // EOF
                 if (bytesRead <= 0) {
                     break;
@@ -186,13 +187,13 @@ public class CloudSocket {
     }
 
     /**
-     * Receive an integer from the socket
+     * Receive a long from the socket
      *
-     * @return The integer received
+     * @return The long received
      */
-    public int receiveInt() {
+    public long receiveLong() {
         try {
-            return getIn().readInt();
+            return getIn().readLong();
         } catch (IOException e) {
             return -1;
         }
@@ -220,7 +221,7 @@ public class CloudSocket {
     public void receiveStream(OutputStream outputBuffer) {
         try {
             // Length of the file
-            int length = this.receiveInt();
+            long length = this.receiveLong();
 
             // Buffer of chunkSize bytes
             byte[] buffer = new byte[chunkSize];
@@ -228,7 +229,7 @@ public class CloudSocket {
             // Receive the file in chunks of chunkSize bytes, until the end
             do {
                 // Read chunkSize bytes from the socket
-                int bytesRead = this.receiveBytes(buffer, Math.min(chunkSize, length));
+                int bytesRead = this.receiveBytes(buffer, (int)Math.min(chunkSize, length));
 
                 // EOF
                 if (bytesRead == -1) {
