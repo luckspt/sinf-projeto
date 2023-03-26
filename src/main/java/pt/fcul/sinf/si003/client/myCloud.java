@@ -86,15 +86,14 @@ public class myCloud {
             File file = io.openFile(getBaseDir(), fileName, !method.equals("g"));
 
             // and on the server
-            // TODO: FIX! this does NOT include the added extensions (.cifrado, .assinado)
-            boolean exists = fileExistsInServer(file);
-            if (!exists && method.equals("g")) {
-                // -g requires the file to exist, so error if it doesn't exist
-                io.error("File " + fileName + " does not exist in the server");
-                continue;
-            } else if (exists && !method.equals("g")) {
-                // all other methods require the file to not exist, so error if it exists
-                io.error("File " + fileName + " already exists in the server");
+            boolean cipheredExists = fileExistsInServer(new File(fileName + ".cifrado"));
+            boolean signedExists = fileExistsInServer(new File(fileName + ".assinado"));
+            boolean secureExists = fileExistsInServer(new File(fileName + ".seguro"));
+
+            // If it's a download, check if the file exists on the server
+            //  ciphered, signed, or secure are mutually exclusive
+            if (!method.equals("g") && (cipheredExists || signedExists || secureExists)) {
+                io.printMessage("File " + fileName + " already exists on the server");
                 continue;
             }
 
@@ -113,11 +112,12 @@ public class myCloud {
                     // TODO: using hybrid encryption and sign file
                     break;
                 case "g":
-                    try {
-                        downloadAndDecipherFile(file);
-                    } catch (IOException ioException) {
-                        io.error(ioException.getMessage());
+                    if (!cipheredExists && !signedExists && !secureExists) {
+                        io.printMessage("File " + fileName + " does not exist on the server");
+                        continue;
                     }
+
+                    downloadAndDecipherFile(file, cipheredExists, signedExists, secureExists);
                     break;
                 default:
                     io.errorAndExit("Invalid method");
@@ -125,6 +125,81 @@ public class myCloud {
         }
 
         cloudSocket.close();
+    }
+
+    private static void downloadAndDecipherFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws IOException, UnrecoverableKeyException, NoSuchPaddingException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        if (cipheredExists)
+            decipherHybridEncryption(file, "cifrado");
+        else if (signedExists)
+            verifyFile(file, "assinado");
+        // else if (secureExists) {
+           // decipherHybridEncryption(file, "seguro");
+            // verifyFile(file);
+        // } else
+           // io.error("File " + file.getName() + " does not exist on the server");
+    }
+
+    private static void decipherHybridEncryption(File file, String cipheredExtension) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+        // Download the wrapped symmetric key
+        File wrappedKeyFile = new File(getBaseDir(), file.getName() + ".chave_secreta");
+        ByteArrayOutputStream wrappedKeyOutputStream = new ByteArrayOutputStream();
+        downloadFile(wrappedKeyFile, wrappedKeyOutputStream);
+
+        // Unwrap the symmetric key
+        io.printMessage("Unwrapping symmetric key...");
+        PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
+        Asymmetric asymmetric = new Asymmetric("RSA", 2048);
+        SecretKey symmetricKey = (SecretKey) asymmetric.unWrapKey(wrappedKeyOutputStream.toByteArray(), privateKey, "AES");
+        io.printMessage("Symmetric key unwrapped!");
+
+        // Download the ciphered file
+        File cipheredFile = new File(getBaseDir(), file.getName() + "." + cipheredExtension);
+        FileOutputStream cipheredOutputStream = new FileOutputStream(cipheredFile);
+        downloadFile(cipheredFile, cipheredOutputStream);
+
+        // Decipher the file
+        FileInputStream cipheredInputStream = new FileInputStream(cipheredFile);
+        BufferedInputStream bufferedCipheredInputStream = new BufferedInputStream(cipheredInputStream);
+        FileOutputStream fileOutputStream = new FileOutputStream(file);
+
+        io.printMessage("Deciphering " + file.getName() + " with AES 128...");
+        Symmetric symmetric = new Symmetric("AES", 128);
+        symmetric.decrypt(symmetricKey, bufferedCipheredInputStream, fileOutputStream);
+        io.printMessage(file.getName() + " deciphered!");
+
+        // Close the streams and delete the temporary file
+        cipheredOutputStream.close();
+        cipheredFile.delete();
+        fileOutputStream.close();
+    }
+
+    private static void verifyFile(File file, String signedExtension) throws KeyStoreException, NoSuchAlgorithmException, IOException, SignatureException, InvalidKeyException {
+        // Download the signature
+        File signatureFile = new File(getBaseDir(), file.getName() + ".assinatura");
+        ByteArrayOutputStream signatureOutputStream = new ByteArrayOutputStream();
+        downloadFile(signatureFile, signatureOutputStream);
+
+        // Download the signed file
+        FileOutputStream signedOutputStream = new FileOutputStream(file);
+        downloadFile(new File(getBaseDir(), file.getName() + "." + signedExtension), signedOutputStream);
+        signedOutputStream.close();
+
+        FileInputStream signedInputStream = new FileInputStream(file);
+        BufferedInputStream bufferedSignedInputStream = new BufferedInputStream(signedInputStream);
+
+        // Verify the signature
+        Certificate certificate = clientKeyStore.getAliasCertificate();
+        Sign signature = new Sign("SHA256withRSA");
+        boolean valid = signature.verify(signatureOutputStream.toByteArray(), bufferedSignedInputStream, certificate);
+
+        // Close the streams and delete the temporary file
+        bufferedSignedInputStream.close();
+        signedInputStream.close();
+
+        if (valid)
+            io.printMessage("Signature is valid!");
+        else
+            io.error("Signature is not valid!");
     }
 
     /**
@@ -155,7 +230,7 @@ public class myCloud {
         // Send the encrypted file to the server
         io.printMessage("Sending encrypted file to server...");
         cloudSocket.sendString("upload " + cipheredFileName);
-        cloudSocket.sendStream((int)encryptedFile.length(), encryptedFileBufferedStream);
+        cloudSocket.sendStream((int) encryptedFile.length(), encryptedFileBufferedStream);
 
         // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
@@ -209,46 +284,6 @@ public class myCloud {
         cloudSocket.sendStream((int) file.length(), bufferedInputStream);
     }
 
-    private static void decipherHybridEncryption(InputStream fileInputStream, ByteArrayOutputStream keyStream, OutputStream outputStream) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
-        // Get the private key from the keystore
-        PrivateKey privateKey = (PrivateKey) clientKeyStore.getAliasKey();
-
-        // Unwrap the symmetric key
-        io.printMessage("Unwrapping symmetric key with private key...");
-
-        // Unwrap the symmetric key with the private key
-        Asymmetric asymmetric = new Asymmetric("RSA", 2048);
-        SecretKey symmetricKey = (SecretKey) asymmetric.unWrapKey(keyStream.toByteArray(), privateKey, "AES");
-
-        io.printMessage("Symmetric key unwrapped!");
-        io.printMessage("Decrypting file with AES 128...");
-
-        // Decrypt the file
-        Symmetric symmetric = new Symmetric("AES", 128);
-        symmetric.decrypt(symmetricKey, fileInputStream, outputStream);
-
-        io.printMessage("File decrypted!");
-    }
-
-    private static Pair<String, String> getNameAndExtension(String fileName) {
-        int lastIndexOf = fileName.lastIndexOf(".");
-        String name = fileName.substring(0, lastIndexOf);
-        String extension = fileName.substring(lastIndexOf + 1);
-        return new Pair<>(name, extension);
-    }
-
-    private static String getRelatedFile(String fileName, String extension) {
-        switch (extension) {
-            case "seguro":
-            case "assinado":
-                return fileName + ".assinatura";
-            case "cifrado":
-                return fileName + ".chave_secreta";
-            default:
-                return null;
-        }
-    }
-
     private static void downloadFile(File file, OutputStream outputStream) throws IOException {
         // Check if the file exists in the server
         cloudSocket.sendString("exists " + file.getName());
@@ -261,81 +296,6 @@ public class myCloud {
         cloudSocket.sendString("download " + file.getName());
         cloudSocket.receiveStream(outputStream);
         io.printMessage("File " + file.getName() + " downloaded!");
-    }
-
-    /**
-     * Download the file from the server, decipher it, and validate the signature
-     *
-     * @param file The file to download
-     * @throws IOException If there is an error reading the file
-     */
-    private static void downloadAndDecipherFile(File file) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
-        Pair<String, String> nameAndExtension = getNameAndExtension(file.getName());
-        String fileName = nameAndExtension.getFirst();
-        String fileExtension = nameAndExtension.getSecond();
-
-        // Create the streams
-        // Create a temporary file to store the file
-        FileOutputStream fileOutputStream = new FileOutputStream(file);
-
-        // Download related file (signature or wrapped key) to memory (it's less than 1MB)
-        ByteArrayOutputStream relatedFileOutputStream = new ByteArrayOutputStream();
-        downloadFile(new File(getBaseDir(), getRelatedFile(fileName, fileExtension)), relatedFileOutputStream);
-
-        // Download actual file
-        downloadFile(file, fileOutputStream);
-
-        // Read the temporary file
-        FileInputStream fileInputStream = new FileInputStream(file);
-        BufferedInputStream fileBufferedInputStream = new BufferedInputStream(fileInputStream);
-
-        // Create the output file
-        File outputFile = new File(getBaseDir(), fileName);
-        FileOutputStream outputFileOutputStream = new FileOutputStream(outputFile);
-
-        boolean deleteActualFile = false;
-        switch (fileExtension) {
-            // If the file is encrypted with hybrid encryption
-            case "cifrado":
-                try {
-                    decipherHybridEncryption(fileBufferedInputStream, relatedFileOutputStream, outputFileOutputStream);
-                } catch (InvalidKeyException invalidKeyException) {
-                    io.error("Invalid key! Are you sure you ciphered with the inverse key?");
-                    deleteActualFile = true;
-                }
-                break;
-            // If the file is signed
-            case "assinado":
-                // Download file signature to the output stream
-                try {
-                    verifySignature(fileBufferedInputStream, relatedFileOutputStream);
-                } catch (SignatureException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                    deleteActualFile = true;
-                }
-                break;
-            // If the file is encrypted with hybrid encryption and signed
-            case "seguro":
-                break;
-            default:
-                io.errorAndExit("Invalid file extension");
-                deleteActualFile = true;
-                break;
-        }
-
-        // Close the streams
-        outputFileOutputStream.close();
-        fileBufferedInputStream.close();
-        fileInputStream.close();
-        fileOutputStream.close();
-
-        // Delete the temporary file
-        file.delete();
-
-        // Delete the actual file in case of errors
-        if (deleteActualFile)
-            outputFile.delete();
     }
 
     private static void verifySignature(InputStream fileStream, ByteArrayOutputStream signatureStream) throws KeyStoreException, IOException, InvalidKeyException, NoSuchAlgorithmException, SignatureException {
@@ -353,7 +313,7 @@ public class myCloud {
         Sign signature = new Sign("SHA256withRSA");
 
 //        if(signature.verify(fileStream.toByteArray(), new ByteArrayInputStream(signatureStream.toByteArray()), certificate))
-        if(signature.verify(signatureStream.toByteArray(), fileStream, certificate))
+        if (signature.verify(signatureStream.toByteArray(), fileStream, certificate))
             io.printMessage("Signature correctly verified!");
         else
             io.printMessage("Signature not verified!");
