@@ -124,6 +124,20 @@ public class myCloud {
                     case "s":
                         io.printMessage("Signing file " + fileName + "...");
                         signFile(file);
+
+                        // Send signed file to server
+                        // Read the signed file
+                        FileInputStream signedFileInputStream = new FileInputStream(file);
+                        BufferedInputStream signedFileBufferedInputStream = new BufferedInputStream(signedFileInputStream);
+
+                        // Send the signed file to the server
+                        io.printMessage("Sending signed file to server...");
+                        cloudSocket.sendString("upload " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
+                        cloudSocket.sendStream((int) file.length(), signedFileBufferedInputStream);
+
+                        // Close signed file input stream
+                        signedFileBufferedInputStream.close();
+                        signedFileInputStream.close();
                         break;
                     case "e":
                         io.printMessage("Performing hybrid encryption and signing file " + fileName + "...");
@@ -157,7 +171,7 @@ public class myCloud {
         // 2. Signed
         // 3. Ciphered
         if (secureExists) {
-            decipherHybridEncryption(file, FileExtensions.CIFRADO);
+            decipherHybridEncryption(file, FileExtensions.SEGURO);
             verifyFile(file);
         } else if (signedExists) {
             // We need to download the signed file first, because verifyFile() will read from disk
@@ -344,20 +358,6 @@ public class myCloud {
 
         // Close signature input stream
         signatureInputStream.close();
-
-        // TODO: extract this to a method so that sign only signs and sends the signature
-        // Read the signed file
-        FileInputStream signedFileInputStream = new FileInputStream(file);
-        BufferedInputStream signedFileBufferedInputStream = new BufferedInputStream(signedFileInputStream);
-
-        // Send the signed file to the server
-        io.printMessage("Sending signed file to server...");
-        cloudSocket.sendString("upload " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
-        cloudSocket.sendStream((int) file.length(), signedFileBufferedInputStream);
-
-        // Close signed file input stream
-        signedFileBufferedInputStream.close();
-        signedFileInputStream.close();
     }
 
     private static void downloadFile(File file, OutputStream outputStream) throws IOException {
