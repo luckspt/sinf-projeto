@@ -12,6 +12,17 @@ public class Sign {
         this.algorithm = algorithm;
     }
 
+    /**
+     * Read the input stream and sign it with a signature of the given algorithm and private key.
+     * 
+     * @param inputStream the input stream to sign
+     * @param privateKey the private key to sign the input stream
+     * 
+     * @return the signature of the input stream
+     */
+
+
+
     public byte[] sign(InputStream inputStream, PrivateKey privateKey) throws SignatureException, InvalidKeyException, NoSuchAlgorithmException {
         // recebe o ficheiro e a chave privada => retorna o ficheiro assinado
         Signature signature = Signature.getInstance(algorithm);
