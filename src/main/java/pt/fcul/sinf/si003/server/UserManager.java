@@ -5,9 +5,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Saves, loads and checks salted passwords from a text file
+ * User manager
  */
-public class PasswordManager {
+public class UserManager {
     private File file;
     private Map<String, User> users;
 
@@ -15,7 +15,7 @@ public class PasswordManager {
      *  Create a new PasswordManager
      * @param fileName The name of the file to save the passwords
      */
-    public PasswordManager(String baseDirectory, String fileName) throws IOException {
+    public UserManager(String baseDirectory, String fileName) throws IOException {
         this.file = new File(baseDirectory, fileName);
         if (!this.file.exists())
             this.file.createNewFile();

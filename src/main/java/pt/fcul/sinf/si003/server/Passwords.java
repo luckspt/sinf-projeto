@@ -2,12 +2,10 @@ package pt.fcul.sinf.si003.server;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Random;
 
 /**
@@ -18,7 +16,15 @@ import java.util.Random;
  */
 public class Passwords {
     private static final Random RANDOM = new SecureRandom();
-    private static final int ITERATIONS = 65536;
+
+    /**
+     * NIST recommends at least 10'000 iterations
+     */
+    private static final int ITERATIONS = 10000;
+    /**
+     * NIST recommends a salt length of at least 32 bytes.
+     */
+    private static final int SALT_SIZE = 32;
     private static final int KEY_LENGTH = 256;
 
     /**
@@ -31,8 +37,8 @@ public class Passwords {
      *
      * @return a size bytes random salt
      */
-    public static byte[] getNextSalt(int size) {
-        byte[] salt = new byte[size];
+    public static byte[] getNextSalt() {
+        byte[] salt = new byte[SALT_SIZE];
         RANDOM.nextBytes(salt);
         return salt;
     }

@@ -25,7 +25,7 @@ public class myCloudServer {
     /**
      * The password manager
      */
-    private static PasswordManager passwordManager;
+    private static UserManager userManager;
 
     /**
      * The main method.
@@ -60,7 +60,7 @@ public class myCloudServer {
 
         // Password manager
         try {
-            passwordManager = new PasswordManager(baseDir, "users");
+            userManager = new UserManager(baseDir, "users");
             // passwordManager.setUser("admin", "admin");
         } catch (IOException e) {
             io.errorAndExit("Could not read password file: " + e.getMessage());

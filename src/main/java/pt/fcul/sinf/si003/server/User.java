@@ -38,7 +38,7 @@ public class User {
 
     public void hashPassword(String password) {
         // Generate salt
-        byte[] salt = Passwords.getNextSalt(16);
+        byte[] salt = Passwords.getNextSalt();
 
         // Hash password
         byte[] hashedPassword = Passwords.hash(password.toCharArray(), salt);
