@@ -4,11 +4,15 @@ import pt.fcul.sinf.si003.CloudSocket;
 import pt.fcul.sinf.si003.IO;
 
 import java.io.*;
+import java.util.Arrays;
 
 /**
  * The server thread.
  */
 public class ServerThread extends Thread {
+    private final String USERS_DIR = "users/";
+    private final String CERTS_DIR = "certs/";
+
     /**
      * The socket abstraction
      */
@@ -18,12 +22,15 @@ public class ServerThread extends Thread {
      */
     private final IO io = new IO();
 
+    private final UserManager userManager;
+
     /**
      * Creates a new instance of ServerThread.
      * @param cloudSocket the socket abstraction
      */
-    public ServerThread(CloudSocket cloudSocket) {
+    public ServerThread(CloudSocket cloudSocket, UserManager userManager) {
         this.cloudSocket = cloudSocket;
+        this.userManager = userManager;
     }
 
     /**
@@ -39,37 +46,69 @@ public class ServerThread extends Thread {
                 break;
             }
 
-            String commandName = command.split(" ")[0];
-            String fileName = command.split(" ")[1];
-            File file = new File(myCloudServer.getBaseDir(), fileName);
+            String[] commandParts = command.split(" ");
+            String commandName = commandParts[0];
+            String[] arguments = Arrays.copyOfRange(commandParts, 1, commandParts.length);
+            File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
 
-            io.info("New request:\n---- Command: " + commandName + "\n---- File   : " + file.getAbsolutePath() + "\n---- Exists : " + file.exists());
+            io.info("New request:\n---- Command: " + commandName + "\n---- Parameters:\n- " + Arrays.stream(arguments).map(s -> s + "\n").reduce("\n- ", String::concat) + "---- File: " + file.getAbsolutePath());
 
             switch (commandName) {
-                case "exists":
+                case "exists": {
                     existsFile(file);
                     break;
+                }
                 // EXTRA: delete file
-                case "delete":
+                case "delete": {
                     deleteFile(file);
                     break;
-                case "upload":
+                }
+                case "upload": {
                     try {
                         uploadFile(file);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     break;
-                case "download":
+                }
+                case "download": {
                     try {
                         downloadFile(file);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     break;
+                }
+                case "signup": {
+                    // Client sends username, password and certificate (name only)
+                    String username = commandParts[1];
+                    String password = commandParts[2];
+
+                    try {
+                        signup(username, password, file);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
                 default:
-                    cloudSocket.sendString("Invalid command. Available commands: exists, delete, upload");
+                    cloudSocket.sendString("Invalid command. Available commands: exists, delete, upload, download, signup");
             }
+        }
+    }
+
+    /**
+     * Calculates the file path based on the command name and arguments.
+     * @param commandName the command name
+     * @param arguments the arguments
+     * @return the file path
+     */
+    private String getFilePath(String commandName, String[] arguments) {
+        // TODO: make the path to the recipient's folder when sharing a file with someone or saving to self
+        switch (commandName) {
+            case "signup":
+                return CERTS_DIR + arguments[0];
+            default:
+                return arguments[0];
         }
     }
 
@@ -123,5 +162,24 @@ public class ServerThread extends Thread {
         cloudSocket.receiveStream(fileOutputStream);
         fileOutputStream.close();
         io.success("File received");
+    }
+
+    private void signup(String username, String password, File certificate) throws IOException {
+        // Validate that the user does not exist
+        if (this.userManager.userExists(username)) {
+            cloudSocket.sendBool(false);
+            return;
+        }
+
+        // Add the user
+        this.userManager.setUser(username, password);
+        cloudSocket.sendBool(true);
+
+        // Create the user's folder
+        File userFolder = new File(myCloudServer.getBaseDir(), USERS_DIR + username);
+        userFolder.mkdir();
+
+        // Save the certificate
+        this.uploadFile(certificate);
     }
 }

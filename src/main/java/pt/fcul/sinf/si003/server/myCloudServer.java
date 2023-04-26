@@ -84,7 +84,7 @@ public class myCloudServer {
 
                 // Create a new thread for the connection
                 CloudSocket cloudSocket = new CloudSocket(clientSocket, chunkSize);
-                ServerThread serverThread = new ServerThread(cloudSocket);
+                ServerThread serverThread = new ServerThread(cloudSocket, userManager);
 
                 // Start the thread
                 serverThread.start();
