@@ -23,6 +23,11 @@ public class myCloudServer {
     private static String baseDir = "./";
 
     /**
+     * The password manager
+     */
+    private static PasswordManager passwordManager;
+
+    /**
      * The main method.
      * @param args the arguments
      */
@@ -53,7 +58,13 @@ public class myCloudServer {
         if (arguments.containsKey("-chunkSize") && arguments.get("-chunkSize").size() == 1 && arguments.get("-chunkSize").get(0).matches("^[0-9]+$"))
             chunkSize = Math.max(1024, Math.min(65535, Integer.parseInt(arguments.get("-chunkSize").get(0))));
 
-        //
+        // Password manager
+        try {
+            passwordManager = new PasswordManager(baseDir, "users");
+            // passwordManager.setUser("admin", "admin");
+        } catch (IOException e) {
+            io.errorAndExit("Could not read password file: " + e.getMessage());
+        }
 
         // Create server socket
         ServerSocket serverSocket = null;
