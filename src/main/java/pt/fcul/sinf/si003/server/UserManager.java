@@ -9,7 +9,7 @@ import java.util.Map;
  */
 public class UserManager {
     private File file;
-    private Map<String, User> users;
+    private Map<String, ServerUser> users;
 
     /**
      *  Create a new PasswordManager
@@ -28,15 +28,15 @@ public class UserManager {
         FileReader fileReader = new FileReader(this.file);
         BufferedReader bufferedReader = new BufferedReader(fileReader);
 
-        this.users = new HashMap();
+        this.users = new HashMap<>();
 
         // Read file line by line until EOF
         String line;
         while ((line = bufferedReader.readLine()) != null) {
-            User user = User.fromString(line);
+            ServerUser serverUser = ServerUser.fromString(line);
 
             // Add user to list
-            this.users.put(user.getUsername(), user);
+            this.users.put(serverUser.getUsername(), serverUser);
         }
 
         // Close streams
@@ -50,8 +50,8 @@ public class UserManager {
         BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
 
         // Write each user to file line by line
-        for (User user : this.users.values()) {
-            bufferedWriter.write(user.toString());
+        for (ServerUser serverUser : this.users.values()) {
+            bufferedWriter.write(serverUser.toString());
             bufferedWriter.newLine();
         }
 
@@ -69,17 +69,19 @@ public class UserManager {
         return this.users.containsKey(username);
     }
 
+    public ServerUser getUser(String username) {
+        return this.users.get(username);
+    }
+
     /**
      * Checks if a password is correct
-     * @param username The username to check
+     * @param user The user to check
      * @param password The password to check
      * @return True if the password is correct, false otherwise
-     * @requires userExists(username)
+     * @requires user != null
      */
-    public boolean checkPassword(String username, String password) {
-        User user = this.users.get(username);
-        // TODO
-        return true;
+    public boolean checkPassword(ServerUser user, String password) {
+        return Passwords.isExpectedPassword(password.toCharArray(), user.getSalt(), user.getHashedPassword());
     }
 
     /**
@@ -90,8 +92,8 @@ public class UserManager {
      */
     public void setUser(String username, String password) throws IOException {
         // Create user and add to list
-        User user = new User(username, password);
-        this.users.put(user.getUsername(), user);
+        ServerUser serverUser = new ServerUser(username, password);
+        this.users.put(serverUser.getUsername(), serverUser);
 
         // Save to file
         this.flush();

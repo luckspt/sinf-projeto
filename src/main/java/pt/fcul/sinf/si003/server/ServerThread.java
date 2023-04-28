@@ -38,6 +38,8 @@ public class ServerThread extends Thread {
      */
     @Override
     public void run() {
+        boolean isAuthenticated = false;
+
         while (true) {
             String command = cloudSocket.receiveString();
             // Check if connection was closed
@@ -52,18 +54,34 @@ public class ServerThread extends Thread {
             File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
 
             io.info("New request:\n---- Command: " + commandName + "\n---- Parameters:\n- " + Arrays.stream(arguments).map(s -> s + "\n").reduce("\n- ", String::concat) + "---- File: " + file.getAbsolutePath());
+            io.info("Is authenticated: " + isAuthenticated);
 
             switch (commandName) {
                 case "exists": {
+                    // exists <username> <file>
+                    if (!isAuthenticated) {
+                        break;
+                    }
+
                     existsFile(file);
                     break;
                 }
                 // EXTRA: delete file
                 case "delete": {
+                    // delete <username> <file>
+                    if (!isAuthenticated) {
+                        break;
+                    }
+
                     deleteFile(file);
                     break;
                 }
                 case "upload": {
+                    // upload <username> <file>
+                    if (!isAuthenticated) {
+                        break;
+                    }
+
                     try {
                         uploadFile(file);
                     } catch (IOException e) {
@@ -72,6 +90,11 @@ public class ServerThread extends Thread {
                     break;
                 }
                 case "download": {
+                    // download <username> <file>
+                    if (!isAuthenticated) {
+                        break;
+                    }
+
                     try {
                         downloadFile(file);
                     } catch (IOException e) {
@@ -80,7 +103,11 @@ public class ServerThread extends Thread {
                     break;
                 }
                 case "signup": {
-                    // Client sends username, password and certificate (name only)
+                    // signup <username> <password>
+                    if (isAuthenticated) {
+                        break;
+                    }
+
                     String username = commandParts[1];
                     String password = commandParts[2];
 
@@ -89,6 +116,16 @@ public class ServerThread extends Thread {
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
+                    break;
+                }
+                case "login": {
+                    // login <username> <password>
+                    String username = commandParts[1];
+                    String password = commandParts[2];
+
+                    isAuthenticated = login(username, password);
+                    cloudSocket.sendBool(isAuthenticated);
+                    break;
                 }
                 default:
                     cloudSocket.sendString("Invalid command. Available commands: exists, delete, upload, download, signup");
@@ -103,13 +140,13 @@ public class ServerThread extends Thread {
      * @return the file path
      */
     private String getFilePath(String commandName, String[] arguments) {
-        // TODO: make the path to the recipient's folder when sharing a file with someone or saving to self
-        switch (commandName) {
-            case "signup":
-                return CERTS_DIR + arguments[0];
-            default:
-                return arguments[0];
+        if (commandName.equals("signup")) {
+            // arguments[0] is the username
+            return CERTS_DIR + arguments[0] + ".cer";
         }
+
+        // arguments[0] is the username and arguments[1] is the file name
+        return USERS_DIR + arguments[0] + "/" + arguments[1];
     }
 
     /**
@@ -166,20 +203,40 @@ public class ServerThread extends Thread {
 
     private void signup(String username, String password, File certificate) throws IOException {
         // Validate that the user does not exist
-        if (this.userManager.userExists(username)) {
-            cloudSocket.sendBool(false);
+        boolean canSignup = !this.userManager.userExists(username);
+        // Send whether the user can be added
+        cloudSocket.sendBool(canSignup);
+
+        // Stop if the user cannot be added
+        if (!canSignup) {
             return;
         }
 
         // Add the user
         this.userManager.setUser(username, password);
-        cloudSocket.sendBool(true);
 
         // Create the user's folder
         File userFolder = new File(myCloudServer.getBaseDir(), USERS_DIR + username);
-        userFolder.mkdir();
+        if(!userFolder.mkdir())
+            io.error("Could not create user folder");
 
-        // Save the certificate
+        // Receive and save the certificate
         this.uploadFile(certificate);
+    }
+
+    private boolean login(String username, String password) {
+        // Validate that the user exists
+        ServerUser user = this.userManager.getUser(username);
+        if (user == null) {
+            return false;
+        }
+
+        // Validate that the password is correct
+        if (!this.userManager.checkPassword(user, password)) {
+            cloudSocket.sendBool(false);
+            return false;
+        }
+
+        return true;
     }
 }

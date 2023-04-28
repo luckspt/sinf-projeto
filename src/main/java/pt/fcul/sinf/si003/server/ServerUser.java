@@ -2,21 +2,21 @@ package pt.fcul.sinf.si003.server;
 
 import java.util.Base64;
 
-public class User {
+public class ServerUser {
     private static final String SEPARATOR = ";";
     private String username;
-    private byte[] password;
+    private byte[] hashedPassword;
     private byte[] salt;
 
-    public User(String username, String password) {
+    public ServerUser(String username, String password) {
         this.username = username;
         this.hashPassword(password);
     }
 
-    public User(String username, String password, String salt) {
+    public ServerUser(String username, String hashedPassword, String salt) {
         this.username = username;
 
-        this.setPassword(Base64.getDecoder().decode(password.getBytes()));
+        this.setHashedPassword(Base64.getDecoder().decode(hashedPassword.getBytes()));
         this.setSalt(Base64.getDecoder().decode(salt.getBytes()));
     }
 
@@ -24,12 +24,16 @@ public class User {
         return this.username;
     }
 
-    public byte[] getPassword() {
-        return this.password;
+    public byte[] getHashedPassword() {
+        return this.hashedPassword;
     }
 
-    public String getPasswordString() {
-        return Base64.getEncoder().encodeToString(this.password);
+    public String getHashedPasswordString() {
+        return Base64.getEncoder().encodeToString(this.hashedPassword);
+    }
+
+    public byte[] getSalt() {
+        return this.salt;
     }
 
     public String getSaltString() {
@@ -43,12 +47,12 @@ public class User {
         // Hash password
         byte[] hashedPassword = Passwords.hash(password.toCharArray(), salt);
 
-        this.setPassword(hashedPassword);
+        this.setHashedPassword(hashedPassword);
         this.setSalt(salt);
     }
 
-    public void setPassword(byte[] password) {
-        this.password = password;
+    public void setHashedPassword(byte[] hashedPassword) {
+        this.hashedPassword = hashedPassword;
     }
 
     public void setSalt(byte[] salt) {
@@ -56,12 +60,12 @@ public class User {
     }
 
     public String toString() {
-        return this.username + SEPARATOR + this.getPasswordString() + SEPARATOR + this.getSaltString();
+        return this.username + SEPARATOR + this.getHashedPasswordString() + SEPARATOR + this.getSaltString();
     }
 
-    public static User fromString(String userString) {
+    public static ServerUser fromString(String userString) {
         String[] userArray = userString.split(SEPARATOR);
 
-        return new User(userArray[0], userArray[1], userArray[2]);
+        return new ServerUser(userArray[0], userArray[1], userArray[2]);
     }
 }

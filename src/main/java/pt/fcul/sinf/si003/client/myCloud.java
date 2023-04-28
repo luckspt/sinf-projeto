@@ -1,7 +1,6 @@
 package pt.fcul.sinf.si003.client;
 
-import pt.fcul.sinf.si003.CloudSocket;
-import pt.fcul.sinf.si003.IO;
+import pt.fcul.sinf.si003.*;
 
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
@@ -53,7 +52,7 @@ public class myCloud {
      *
      * @param args The arguments
      */
-    public static void main(String[] args) {
+    public static void main(String[] args) throws FileNotFoundException {
         asymmetric = new Asymmetric("RSA");
         signature = new Sign("SHA256withRSA");
         try {
@@ -69,19 +68,20 @@ public class myCloud {
         if (!arguments.containsKey("a"))
             io.errorAndExit("Missing server address parameter (-a)");
 
-        // Only allow one method (one of -c, -s, -e, -g), because they are mutually exclusive
+        // Only allow one method (one of -au, -c, -s, -e, -g), because they are mutually exclusive
         String method = null;
         for (String key : arguments.keySet()) {
             if (isAMethod(key)) {
                 if (method != null)
-                    io.errorAndExit("There must be at most one method (one of -c, -s, -e, -g)");
+                    io.errorAndExit("There must be at most one method (one of -au, -c, -s, -e, -g)");
                 method = key;
             }
         }
 
         if (method == null)
-            io.errorAndExit("Missing method parameter (one of -c, -s, -e, -g)");
-        // Method is now guaranteed to be one of -c, -s, -e, -g, -x
+            io.errorAndExit("Missing method parameter (one of -au, -c, -s, -e, -g)");
+
+        // Method is now guaranteed to be one of -au, -c, -s, -e, -g, -x
         assert method != null;
 
         // EXTRA: base directory
@@ -101,6 +101,7 @@ public class myCloud {
 
         // Validate file names and remove duplicates
         List<String> fileNames = new ArrayList<>(new HashSet<>(arguments.get(method)));
+        // TODO validate each one separately
         validateFileNames(fileNames);
 
         // EXTRA: chunk size
@@ -116,6 +117,33 @@ public class myCloud {
             io.success("Connected to server " + cloudSocket.getRemoteAddress());
         } catch (IOException e) {
             io.errorAndExit("Could not connect to server: " + e.getMessage());
+        }
+
+        // Register user
+        if (method.equals("au")) {
+            if (arguments.get("au").size() != 3)
+                io.errorAndExit("-au requires 3 parameters. Missing username, password, or certificate path");
+
+            String username = arguments.get("au").get(0);
+            String password = arguments.get("au").get(1);
+            String certificatePath = arguments.get("au").get(2);
+
+            registerUser(username, password, certificatePath);
+            return;
+        } else {
+            if ((!arguments.containsKey("u") || arguments.get("u").size() != 1) ||
+                    (!arguments.containsKey("p") || arguments.get("p").size() != 1)) {
+                // Authenticate user
+                // Isn't a signup (-au) and doesn't have username or password
+                io.errorAndExit("Missing username (-u) or password (-p) parameter");
+            } else {
+                String username = arguments.get("u").get(0);
+                String password = arguments.get("p").get(0);
+
+                if (!authenticateUser(username, password)) {
+                    io.errorAndExit("Username or password is incorrect");
+                }
+            }
         }
 
         // Execute the method
@@ -230,7 +258,7 @@ public class myCloud {
      * @return True if it's a method, false otherwise
      */
     private static boolean isAMethod(String method) {
-        return method.equals("c") || method.equals("s") || method.equals("e") || method.equals("g") || method.equals("x");
+        return method.equals("au") || method.equals("c") || method.equals("s") || method.equals("e") || method.equals("g") || method.equals("x");
     }
 
     /**
@@ -527,5 +555,30 @@ public class myCloud {
     private static boolean fileExistsInServer(File file) {
         cloudSocket.sendString("exists " + file.getName());
         return cloudSocket.receiveBool();
+    }
+
+    private static boolean authenticateUser(String username, String password) {
+        cloudSocket.sendString("login " + username + " " + password);
+        return cloudSocket.receiveBool();
+    }
+
+    private static boolean registerUser(String username, String password, String certificatePath) throws FileNotFoundException {
+        cloudSocket.sendString("signup " + username + " " + password);
+        boolean registered = cloudSocket.receiveBool();
+        if (!registered) {
+            io.errorAndExit("User " + username + " already exists!");
+        }
+
+        // Send the certificate to the server
+        File certificateFile = new File(getBaseDir(), certificatePath);
+        FileInputStream certificateInputStream = new FileInputStream(certificateFile);
+        BufferedInputStream certificateBufferedInputStream = new BufferedInputStream(certificateInputStream);
+
+        // Send the encrypted file to the server
+        io.info("Sending certificate " + certificateFile.getName() + " to server...");
+        cloudSocket.sendStream(certificateFile.length(), certificateBufferedInputStream);
+        io.success(certificateFile.getName() + " sent to server!");
+
+        return registered;
     }
 }
