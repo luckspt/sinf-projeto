@@ -88,12 +88,6 @@ public class myCloud {
         if (arguments.containsKey("b"))
             baseDir = arguments.get("b").get(0);
 
-        // EXTRA: keystore path, password, alias, and password
-        String keyStoreAlias = arguments.get("-keyStoreAlias") != null ? arguments.get("-keyStoreAlias").get(0) : "jpp";
-        String keyStorePassword = arguments.get("-keyStorePassword") != null ? arguments.get("-keyStorePassword").get(0) : "123456";
-        String keyStoreAliasPassword = arguments.get("-keyStoreAliasPassword") != null ? arguments.get("-keyStoreAliasPassword").get(0) : "123456";
-        clientKeyStore = new ClientKeyStore(getBaseDir(), keyStoreAlias, keyStorePassword, keyStoreAliasPassword);
-
         // Validate server address and port
         String serverAddress = arguments.get("a").get(0);
         if (serverAddress != null && !serverAddress.matches("^(localhost|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}):[0-9]{1,5}$"))
@@ -144,6 +138,11 @@ public class myCloud {
                 if (!authenticateUser(username, password)) {
                     io.errorAndExit("Username or password is incorrect");
                 }
+                // EXTRA: keystore path, password, alias, and password
+                String keyStoreAlias = arguments.get("-keyStoreAlias") != null ? arguments.get("-keyStoreAlias").get(0) : username;
+                String keyStorePassword = arguments.get("-keyStorePassword") != null ? arguments.get("-keyStorePassword").get(0) : password;
+                String keyStoreAliasPassword = arguments.get("-keyStoreAliasPassword") != null ? arguments.get("-keyStoreAliasPassword").get(0) : password;
+                clientKeyStore = new ClientKeyStore(getBaseDir(), keyStoreAlias, keyStorePassword, keyStoreAliasPassword);
                 destination_username = username;
             }
         }
