@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-
+//./myCloud.sh -a 0.0.0.0:3000 -d files/client/ -g tt.txt.assinado
 /**
  * The client.
  */
@@ -85,8 +85,8 @@ public class myCloud {
         assert method != null;
 
         // EXTRA: base directory
-        if (arguments.containsKey("d"))
-            baseDir = arguments.get("d").get(0);
+        if (arguments.containsKey("b"))
+            baseDir = arguments.get("b").get(0);
 
         // EXTRA: keystore path, password, alias, and password
         String keyStoreAlias = arguments.get("-keyStoreAlias") != null ? arguments.get("-keyStoreAlias").get(0) : "jpp";
@@ -120,6 +120,7 @@ public class myCloud {
         }
 
         // Register user
+        String destination_username = null;
         if (method.equals("au")) {
             if (arguments.get("au").size() != 3)
                 io.errorAndExit("-au requires 3 parameters. Missing username, password, or certificate path");
@@ -143,7 +144,13 @@ public class myCloud {
                 if (!authenticateUser(username, password)) {
                     io.errorAndExit("Username or password is incorrect");
                 }
+                destination_username = username;
             }
+        }
+
+        if(arguments.containsKey("d") && arguments.get("d").size() == 1) {
+            // G. allow sending to another user
+            destination_username = arguments.get("d").get(0);
         }
 
         // Execute the method
@@ -159,9 +166,9 @@ public class myCloud {
             }
 
             // and on the server
-            boolean cipheredExists = fileExistsInServer(new File(fileName + FileExtensions.CIFRADO.getExtensionWithDot()));
-            boolean signedExists = fileExistsInServer(new File(fileName + FileExtensions.ASSINADO.getExtensionWithDot()));
-            boolean secureExists = fileExistsInServer(new File(fileName + FileExtensions.SEGURO.getExtensionWithDot()));
+            boolean cipheredExists = fileExistsInServer(destination_username, new File(fileName + FileExtensions.CIFRADO.getExtensionWithDot()));
+            boolean signedExists = fileExistsInServer(destination_username, new File(fileName + FileExtensions.ASSINADO.getExtensionWithDot()));
+            boolean secureExists = fileExistsInServer(destination_username, new File(fileName + FileExtensions.SEGURO.getExtensionWithDot()));
 
             // If it's a download, check if the file exists on the server
             //  ciphered, signed, or secure are mutually exclusive
@@ -175,12 +182,12 @@ public class myCloud {
                     case "c":
                         // Hybrid encryption
                         io.info("Performing hybrid encryption on file " + fileName + "...");
-                        hybridEncryption(file, FileExtensions.CIFRADO);
+                        hybridEncryption(destination_username, file, FileExtensions.CIFRADO);
                         io.success("Hybrid encrypted file " + fileName);
                         break;
                     case "s":
                         io.info("Signing file " + fileName + "...");
-                        signFile(file);
+                        signFile(destination_username, file);
                         io.success("Signed file " + fileName);
 
                         // Send signed file to server
@@ -190,8 +197,8 @@ public class myCloud {
 
                         // Send the signed file to the server
                         String signedFileName = file.getName() + FileExtensions.ASSINADO.getExtensionWithDot();
-                        io.info("Sending " + signedFileName + " to the server...");
-                        cloudSocket.sendString("upload " + signedFileName);
+                        io.info("Sending " + signedFileName + " to user " + destination_username + " to the server...");
+                        cloudSocket.sendString("upload " + destination_username + " " + signedFileName);
                         cloudSocket.sendStream(file.length(), signedFileBufferedInputStream);
                         io.success("Sent " + signedFileName + " to the server");
 
@@ -201,8 +208,8 @@ public class myCloud {
                         break;
                     case "e":
                         io.info("Performing hybrid encryption and signing file " + fileName + "...");
-                        signFile(file);
-                        hybridEncryption(file, FileExtensions.SEGURO);
+                        signFile(destination_username, file);
+                        hybridEncryption(destination_username, file, FileExtensions.SEGURO);
                         io.success("Hybrid encrypted and signed file " + fileName);
                         break;
                     case "g":
@@ -211,7 +218,7 @@ public class myCloud {
                             continue;
                         }
 
-                        downloadAndDecipherFile(file, cipheredExists, signedExists, secureExists);
+                        downloadAndDecipherFile(destination_username, file, cipheredExists, signedExists, secureExists);
                         break;
                     case "x":
                         if (!cipheredExists && !signedExists && !secureExists) {
@@ -219,7 +226,7 @@ public class myCloud {
                             continue;
                         }
 
-                        deleteFile(file, cipheredExists, signedExists, secureExists);
+                        deleteFile(destination_username, file, cipheredExists, signedExists, secureExists);
                         break;
                     default:
                         io.errorAndExit("Invalid method");
@@ -273,29 +280,29 @@ public class myCloud {
      * @param signedExists   If the signed file exists in the remote
      * @param secureExists   If the secure file exists in the remote
      */
-    private static void downloadAndDecipherFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws UnrecoverableKeyException, NoSuchPaddingException, IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
+    private static void downloadAndDecipherFile(String username, File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws UnrecoverableKeyException, NoSuchPaddingException, IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
         // Establish priority:
         // 1. Secure
         // 2. Signed
         // 3. Ciphered
         if (secureExists) {
-            decipherHybridEncryption(file, FileExtensions.SEGURO);
-            verifyFile(file);
+            decipherHybridEncryption(username, file, FileExtensions.SEGURO);
+            verifyFile(username, file);
         } else if (signedExists) {
             // We need to download the signed file first, because verifyFile() will read from disk
             // Download the signed file
             String signedFileName = file.getName() + FileExtensions.ASSINADO.getExtensionWithDot();
             io.info("Downloading " + signedFileName + " from server...");
             FileOutputStream signedOutputStream = new FileOutputStream(file);
-            downloadFile(new File(getBaseDir(), signedFileName), signedOutputStream);
+            downloadFile(username, new File(getBaseDir(), signedFileName), signedOutputStream);
             io.success("Downloaded " + signedFileName + " from server!");
 
             // Close signed output file stream
             signedOutputStream.close();
 
-            verifyFile(file);
+            verifyFile(username, file);
         } else if (cipheredExists)
-            decipherHybridEncryption(file, FileExtensions.CIFRADO);
+            decipherHybridEncryption(username, file, FileExtensions.CIFRADO);
     }
 
     /**
@@ -306,26 +313,26 @@ public class myCloud {
      * @param signedExists   If the signed file exists in the remote
      * @param secureExists   If the secure file exists in the remote
      */
-    private static void deleteFile(File file, boolean cipheredExists, boolean signedExists, boolean secureExists) {
+    private static void deleteFile(String username, File file, boolean cipheredExists, boolean signedExists, boolean secureExists) {
         // Establish priority:
         // 1. Secure
         // 2. Signed
         // 3. Ciphered
         if (secureExists) {
-            io.info("Deleting secure file " + file.getName() + " and its dependencies...");
-            cloudSocket.sendString("delete " + file.getName() + FileExtensions.SEGURO.getExtensionWithDot());
-            cloudSocket.sendString("delete " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
-            cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
+            io.info("Deleting secure file " + file.getName() + " from user " + username + " and its dependencies...");
+            cloudSocket.sendString("delete " + username  + " " + file.getName() + FileExtensions.SEGURO.getExtensionWithDot());
+            cloudSocket.sendString("delete " + username  + " " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
+            cloudSocket.sendString("delete " + username  + " " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
             io.success("File " + file.getName() + " deleted successfully");
         } else if (signedExists) {
-            io.info("Deleting signed file " + file.getName() + " and its dependencies...");
-            cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
-            cloudSocket.sendString("delete " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
+            io.info("Deleting signed file " + file.getName() + " from user " + username + " and its dependencies...");
+            cloudSocket.sendString("delete " + username  + " " + file.getName() + FileExtensions.ASSINADO.getExtensionWithDot());
+            cloudSocket.sendString("delete " + username  + " " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
             io.success("File " + file.getName() + " deleted successfully");
         } else if (cipheredExists) {
-            io.info("Deleting ciphered file " + file.getName() + " and its dependencies...");
-            cloudSocket.sendString("delete " + file.getName() + FileExtensions.CIFRADO.getExtensionWithDot());
-            cloudSocket.sendString("delete " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
+            io.info("Deleting ciphered file " + file.getName() + " from user " + username + " and its dependencies...");
+            cloudSocket.sendString("delete " + username  + " " + file.getName() + FileExtensions.CIFRADO.getExtensionWithDot());
+            cloudSocket.sendString("delete " + username  + " " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
             io.success("File " + file.getName() + " deleted successfully");
         }
     }
@@ -336,11 +343,11 @@ public class myCloud {
      * @param file      The file
      * @param extension The file extension
      */
-    private static void decipherHybridEncryption(File file, FileExtensions extension) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+    private static void decipherHybridEncryption(String username, File file, FileExtensions extension) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
         // Download the wrapped symmetric key
         File wrappedKeyFile = new File(getBaseDir(), file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
         ByteArrayOutputStream wrappedKeyOutputStream = new ByteArrayOutputStream();
-        downloadFile(wrappedKeyFile, wrappedKeyOutputStream);
+        downloadFile(username, wrappedKeyFile, wrappedKeyOutputStream);
 
         // Unwrap the symmetric key
         io.info("Unwrapping symmetric key...");
@@ -356,7 +363,7 @@ public class myCloud {
         io.info("Downloading " + cipheredFileName + "...");
         File cipheredFile = new File(getBaseDir(), cipheredFileName);
         FileOutputStream cipheredOutputStream = new FileOutputStream(cipheredFile);
-        downloadFile(cipheredFile, cipheredOutputStream);
+        downloadFile(username, cipheredFile, cipheredOutputStream);
         io.success(cipheredFileName + " downloaded!");
 
         // Close ciphered output file stream
@@ -387,12 +394,12 @@ public class myCloud {
      *
      * @param file The file
      */
-    private static boolean verifyFile(File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
+    private static boolean verifyFile(String username, File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
         // Download the signature
         io.info("Downloading signature of " + file.getName() + " ...");
         File signatureFile = new File(getBaseDir(), file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
         ByteArrayOutputStream signatureOutputStream = new ByteArrayOutputStream();
-        downloadFile(signatureFile, signatureOutputStream);
+        downloadFile(username, signatureFile, signatureOutputStream);
         io.success("Signature of " + file.getName() + " downloaded!");
 
         FileInputStream signedInputStream = new FileInputStream(file);
@@ -424,7 +431,7 @@ public class myCloud {
      * @param file              The file to encrypt
      * @param cipheredExtension The ciphered file extension
      */
-    private static void hybridEncryption(File file, FileExtensions cipheredExtension) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
+    private static void hybridEncryption(String username, File file, FileExtensions cipheredExtension) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
         String cipheredFileName = file.getName() + cipheredExtension.getExtensionWithDot();
 
         // Create the streams
@@ -450,8 +457,8 @@ public class myCloud {
         BufferedInputStream encryptedFileBufferedInputStream = new BufferedInputStream(encryptedFileInputStream);
 
         // Send the encrypted file to the server
-        io.info("Sending encrypted " + file.getName() + " to server...");
-        cloudSocket.sendString("upload " + cipheredFileName);
+        io.info("Sending encrypted " + file.getName() + " from user " + username + " to server...");
+        cloudSocket.sendString("upload " + username + " " + cipheredFileName);
         cloudSocket.sendStream(encryptedFile.length(), encryptedFileBufferedInputStream);
         io.success(file.getName() + " sent to server!");
 
@@ -471,7 +478,7 @@ public class myCloud {
 
         // Send the wrapped key to the server
         io.info("Sending wrapped key to server...");
-        cloudSocket.sendString("upload " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
+        cloudSocket.sendString("upload " + username + " " + file.getName() + FileExtensions.CHAVE_SECRETA.getExtensionWithDot());
         cloudSocket.sendStream(wrappedKey.length, new ByteArrayInputStream(wrappedKey));
         io.success("Wrapped key sent to server!");
     }
@@ -481,7 +488,7 @@ public class myCloud {
      *
      * @param file The file to sign
      */
-    private static void signFile(File file) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, SignatureException, InvalidKeyException {
+    private static void signFile(String username, File file) throws IOException, UnrecoverableKeyException, KeyStoreException, NoSuchAlgorithmException, SignatureException, InvalidKeyException {
         // Create the streams
         FileInputStream fileInputStream = new FileInputStream(file);
         BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream);
@@ -502,8 +509,8 @@ public class myCloud {
         ByteArrayInputStream signatureInputStream = new ByteArrayInputStream(signatureData);
 
         // Send the signature to the server
-        io.info("Sending signature of " + file.getName() + "  to server...");
-        cloudSocket.sendString("upload " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
+        io.info("Sending signature of " + file.getName() + " from user " + username + "  to server...");
+        cloudSocket.sendString("upload " + username + " " + file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
         cloudSocket.sendStream(signatureData.length, signatureInputStream);
         io.success("Signature of " + file.getName() + " sent to server!");
 
@@ -517,10 +524,10 @@ public class myCloud {
      * @param file         The file to download
      * @param outputStream The output stream to write the file to
      */
-    private static void downloadFile(File file, OutputStream outputStream) throws IOException {
+    private static void downloadFile(String username, File file, OutputStream outputStream) throws IOException {
         // Check if the file exists in the server
-        io.info("Checking if file " + file.getName() + " exists in the server...");
-        cloudSocket.sendString("exists " + file.getName());
+        io.info("Checking if file " + file.getName() + " from user " + username + " exists in the server...");
+        cloudSocket.sendString("exists " + username + " " + file.getName());
         if (!cloudSocket.receiveBool()) {
             throw new IOException("File " + file.getName() + " does not exist in the server");
         }
@@ -528,7 +535,7 @@ public class myCloud {
 
         // Download file to the output stream
         io.info("Downloading file " + file.getName() + "...");
-        cloudSocket.sendString("download " + file.getName());
+        cloudSocket.sendString("download " + username + " " + file.getName());
         cloudSocket.receiveStream(outputStream);
         io.success("File " + file.getName() + " downloaded!");
     }
@@ -552,8 +559,8 @@ public class myCloud {
      * @param file The file to check
      * @return True if the file exists, false otherwise
      */
-    private static boolean fileExistsInServer(File file) {
-        cloudSocket.sendString("exists " + file.getName());
+    private static boolean fileExistsInServer(String username, File file) {
+        cloudSocket.sendString("exists " + username + " " + file.getName());
         return cloudSocket.receiveBool();
     }
 
