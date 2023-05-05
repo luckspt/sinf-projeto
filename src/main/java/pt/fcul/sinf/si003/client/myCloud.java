@@ -8,6 +8,9 @@ import javax.crypto.SecretKey;
 import java.io.*;
 import java.security.*;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -278,8 +281,9 @@ public class myCloud {
      * @param cipheredExists If the ciphered file exists in the remote
      * @param signedExists   If the signed file exists in the remote
      * @param secureExists   If the secure file exists in the remote
+     * @throws CertificateException
      */
-    private static void downloadAndDecipherFile(String username, File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws UnrecoverableKeyException, NoSuchPaddingException, IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
+    private static void downloadAndDecipherFile(String username, File file, boolean cipheredExists, boolean signedExists, boolean secureExists) throws UnrecoverableKeyException, NoSuchPaddingException, IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException, CertificateException {
         // Establish priority:
         // 1. Secure
         // 2. Signed
@@ -392,8 +396,9 @@ public class myCloud {
      * The signature will be downloaded by this method
      *
      * @param file The file
+     * @throws CertificateException
      */
-    private static boolean verifyFile(String username, File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException {
+    private static boolean verifyFile(String username, File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException, CertificateException {
         // Download the signature
         io.info("Downloading signature of " + file.getName() + " ...");
         File signatureFile = new File(getBaseDir(), file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
@@ -404,9 +409,29 @@ public class myCloud {
         FileInputStream signedInputStream = new FileInputStream(file);
         BufferedInputStream bufferedSignedInputStream = new BufferedInputStream(signedInputStream);
 
+        // Obtain certificate
+        File certificateFile = new File(getBaseDir(), username + FileExtensions.CERTIFICADO.getExtensionWithDot());
+        io.info("Obtain certificate " + certificateFile + " ...");
+        if(!certificateFile.exists()) {
+            // certificate file does not exist; request server
+            FileOutputStream outputStream = new FileOutputStream(certificateFile);
+            io.info("Get certificate file " + certificateFile.getName() + "...");
+            cloudSocket.sendString("get-certificate " + username);
+            if (!cloudSocket.receiveBool()) {
+                throw new IOException("Certificate " + certificateFile.getName() + " does not exist in the server");
+            }
+            cloudSocket.receiveStream(outputStream);
+            outputStream.close();
+            io.success("Cerficate for " + username + " downloaded!");
+        }
+        // convert certificate file to type Certificate
+        CertificateFactory fac = CertificateFactory.getInstance("X509");
+        FileInputStream certificateInputStream = new FileInputStream(certificateFile);
+        X509Certificate certificate = (X509Certificate) fac.generateCertificate(certificateInputStream);
+        io.success("Certificate obtained!");
+
         // Verify the signature
         io.info("Verifying signature of " + file.getName() + " ...");
-        Certificate certificate = clientKeyStore.getAliasCertificate();
         boolean valid = signature.verify(signatureOutputStream.toByteArray(), bufferedSignedInputStream, certificate);
 
         // Close the signature stream

@@ -23,7 +23,11 @@ public enum FileExtensions {
     /**
      * The file extension of the signature.
      */
-    ASSINATURA("assinatura");
+    ASSINATURA("assinatura"),
+    /**
+     * The file extension of the signature.
+     */
+    CERTIFICADO("cer");
 
     /**
      * The file extension.

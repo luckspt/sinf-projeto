@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
 
 /**
  * The KeyStore abstraction.
@@ -37,7 +38,7 @@ public class ClientKeyStore {
     public ClientKeyStore(String baseDir, String alias, String keystorePassword, String aliasKeyPassword) {
         this.alias = alias;
         this.aliasKeyPassword = aliasKeyPassword;
-        File file = new File(baseDir, String.format("keystore.%sCloud", alias));
+        File file = new File(baseDir, String.format("%s.keystore", alias));
         if (!file.exists())
             new IO().errorAndExit("File " + file.getName() + " does not exist (" + file.getAbsolutePath() + ")");
 

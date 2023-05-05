@@ -51,9 +51,8 @@ public class ServerThread extends Thread {
             String[] commandParts = command.split(" ");
             String commandName = commandParts[0];
             String[] arguments = Arrays.copyOfRange(commandParts, 1, commandParts.length);
-            File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
 
-            io.info("New request:\n---- Command: " + commandName + "\n---- Parameters:\n- " + Arrays.stream(arguments).map(s -> s + "\n").reduce("\n- ", String::concat) + "---- File: " + file.getAbsolutePath());
+            io.info("New request:\n---- Command: " + commandName + "\n---- Parameters:\n- " + Arrays.stream(arguments).map(s -> s + "\n").reduce("\n- ", String::concat));// + "---- File: " + file.getAbsolutePath());
             io.info("Is authenticated: " + isAuthenticated);
 
             switch (commandName) {
@@ -63,6 +62,7 @@ public class ServerThread extends Thread {
                         break;
                     }
 
+                    File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
                     existsFile(file);
                     break;
                 }
@@ -73,6 +73,7 @@ public class ServerThread extends Thread {
                         break;
                     }
 
+                    File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
                     deleteFile(file);
                     break;
                 }
@@ -83,6 +84,7 @@ public class ServerThread extends Thread {
                     }
 
                     try {
+                        File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
                         uploadFile(file);
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -96,14 +98,32 @@ public class ServerThread extends Thread {
                     }
 
                     try {
+                        File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
                         downloadFile(file);
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
                     break;
                 }
+                case "get-certificate": {
+                    // get certificate downloads certificate from certs folder
+                    // get-certificate <username>
+                    if (!isAuthenticated) {
+                        break;
+                    }
+
+                    try {
+                        File cerFilename = new File(CERTS_DIR + commandParts[1] + ".cer");
+                        cloudSocket.sendBool(cerFilename.exists());
+                        if(cerFilename.exists())
+                            downloadFile(cerFilename);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                }
                 case "signup": {
-                    // signup <username> <password>
+                    // signup <username> <password> <certificate>
                     if (isAuthenticated) {
                         break;
                     }
@@ -112,6 +132,7 @@ public class ServerThread extends Thread {
                     String password = commandParts[2];
 
                     try {
+                        File file = new File(myCloudServer.getBaseDir(), this.getFilePath(commandName, arguments));
                         signup(username, password, file);
                     } catch (IOException e) {
                         e.printStackTrace();

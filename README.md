@@ -70,3 +70,13 @@ Por exemplo, para gerar um ficheiro de 3GB: `fallocate -l 3G 3GB.txt; echo "twix
   - Por defeito, o tamanho do _buffer_ é 1024 bytes. É sugerido o tamanho de 65535 bytes por ser este o valor do _window size_ do _tcp_.
 - O servidor responde a comandos/mensagens do servidor, permitindo assim escalar a quantidade de pedidos disponíveis
   - Atualmente existem os comandso `exists`, `upload`, `download`, e `delete`. O último não tem implementação no cliente.
+  
+## Criar keystore
+
+```bash
+username="username"
+# criar keystore
+keytool -genkeypair -keysize 2048 -alias $username -keyalg rsa -keystore $username.keystore -storetype PKCS12
+# criar certificado
+keytool -export -keystore $username.keystore -alias $username -file $username.cer
+```
