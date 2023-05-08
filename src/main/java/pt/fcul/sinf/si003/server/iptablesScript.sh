@@ -18,12 +18,12 @@ iptables -P FORWARD DROP
 # -j flag stands for "jump" and specifies the target of the rule
 
 
-# Allow loopback device traffic ??
+# Allow loopback device traffic 
 #################################
 # loopback (lo) interface is virtual network interface that allows communication within the local machine itself
 # Accept traffic incoming (-i) on the loopback (lo) interface
 iptables -A INPUT -i lo -j ACCEPT
-# Accept traffic outgoing (-o) on the loopback (lo) interface
+# Accept traffic outgoing (-o) on the loopback (lo) interface ??
 iptables -A OUTPUT -o lo -j ACCEPT
 
 
@@ -57,8 +57,7 @@ iptables -A OUTPUT -d gcc_ip_address -p tcp --sport 22 -j ACCEPT
 
 # Allow connections from any origin to myCloud server
 iptables -A OUTPUT -p tcp --sport myCloud_port -j ACCEPT
-# Allow connections from myCloud server to any destination ??
-iptables -A INPUT -p tcp --dport myCloud_port -j ACCEPT
+
 
 
 # Allow ping to machines in the local subnet with mask 255.255.254.0
