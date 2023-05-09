@@ -54,7 +54,6 @@ iptables -A INPUT -s gcc_ip_address -p tcp --dport 22 -j ACCEPT
 iptables -A OUTPUT -d gcc_ip_address -p tcp --sport 22 -j ACCEPT
 
 
-
 # Allow connections from any origin to myCloud server
 iptables -A OUTPUT -p tcp --sport myCloud_port -j ACCEPT
 
@@ -62,6 +61,22 @@ iptables -A OUTPUT -p tcp --sport myCloud_port -j ACCEPT
 
 # Allow ping to machines in the local subnet with mask 255.255.254.0
 iptables -A OUTPUT -p icmp --icmp-type echo-request -d 255.255.254.0/23 -j ACCEPT
+
+
+
+ipset create allowedMachinesIPs hash:ip
+
+ipset add allowedMachinesIPs 10.121.52.14
+ipset add allowedMachinesIPs 10.121.52.15
+ipset add allowedMachinesIPs 10.121.52.16
+ipset add allowedMachinesIPs 10.121.72.23
+ipset add allowedMachinesIPs 10.101.85.138
+ipset add allowedMachinesIPs 10.101.85.18
+ipset add allowedMachinesIPs 10.101.148.1
+ipset add allowedMachinesIPs 10.101.85.137
+
+iptables -A INPUT -m set --match-set allowedMachinesIPs src -j ACCEPT
+iptables -A OUTPUT -m set --match-set allowedMachinesIPs src -j ACCEPT
 
 # Save the iptables rules
 iptables-save > /etc/iptables/rules.v4
