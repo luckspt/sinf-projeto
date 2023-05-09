@@ -253,7 +253,7 @@ public class ServerThread extends Thread {
         }
 
         // Validate that the password is correct
-        if (!this.userManager.checkPassword(user, password)) {
+        if (!user.checkPassword(password)) {
             cloudSocket.sendBool(false);
             return false;
         }
