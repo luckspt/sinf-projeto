@@ -4,7 +4,7 @@ import java.util.Base64;
 
 public class ServerUser {
     private static final String SEPARATOR = ";";
-    private String username;
+    private final String username;
     private byte[] hashedPassword;
     private byte[] salt;
 
@@ -57,6 +57,16 @@ public class ServerUser {
 
     public void setSalt(byte[] salt) {
         this.salt = salt;
+    }
+
+    /**
+     * Checks if a password is correct
+     * @param password The password to check
+     * @return True if the password is correct, false otherwise
+     * @requires user != null
+     */
+    public boolean checkPassword(String password) {
+        return Passwords.isExpectedPassword(password.toCharArray(), this.getSalt(), this.getHashedPassword());
     }
 
     public String toString() {

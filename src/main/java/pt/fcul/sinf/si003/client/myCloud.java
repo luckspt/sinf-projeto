@@ -594,18 +594,23 @@ public class myCloud {
     }
 
     private static boolean registerUser(String username, String password, String certificatePath) throws FileNotFoundException {
+        // First, check if the certificate exists
+        File certificateFile = new File(getBaseDir(), certificatePath);
+        if (!certificateFile.exists()) {
+            io.errorAndExit("Certificate file " + certificateFile.getName() + " does not exist at " + certificateFile.getAbsolutePath());
+        }
+
         cloudSocket.sendString("signup " + username + " " + password);
         boolean registered = cloudSocket.receiveBool();
         if (!registered) {
             io.errorAndExit("User " + username + " already exists!");
         }
 
-        // Send the certificate to the server
-        File certificateFile = new File(getBaseDir(), certificatePath);
+        // Read from the certificate file
         FileInputStream certificateInputStream = new FileInputStream(certificateFile);
         BufferedInputStream certificateBufferedInputStream = new BufferedInputStream(certificateInputStream);
 
-        // Send the encrypted file to the server
+        // Send the certificate file to the server
         io.info("Sending certificate " + certificateFile.getName() + " to server...");
         cloudSocket.sendStream(certificateFile.length(), certificateBufferedInputStream);
         io.success(certificateFile.getName() + " sent to server!");
