@@ -45,18 +45,18 @@ sudo iptables -A OUTPUT -o lo -j ACCEPT
 ############################################
 # -m flag allows to match packets based on their connection state
 # --state ESTABLISHED,RELATED condition matches packets that are part of an existing connection or are related to an existing connection
-sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
-sudo iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+sudo iptables -A INPUT -m state --state ESTABLISHED -j ACCEPT
+sudo iptables -A OUTPUT -m state --state ESTABLISHED -j ACCEPT
 
 # Allow ping from the "gcc" machine
 # -s flag allows to specify the source IP address
 # -p icmp --icmp-type echo-request specifies the protocol and the type of ICMP echo request packets
 # echo-request is the ICMP message type for ping
-sudo iptables -A INPUT -s 10.101.151.5 -p icmp --icmp-type echo-request -j ACCEPT
+sudo iptables -A INPUT -s 10.101.151.5 -p icmp --icmp-type 8 -j ACCEPT
 
 # -d flag allows to specify the destination IP address
 # -p icmp --icmp-type echo-reply specifies the protocol and the type of ICMP echo reply packets
-sudo iptables -A OUTPUT -d 10.101.151.5 -p icmp --icmp-type echo-reply -j ACCEPT
+# sudo iptables -A OUTPUT -d 10.101.151.5 -p icmp --icmp-type 8 -j ACCEPT
 
 # Allow SSH from and to the "gcc" machine
 # -p tcp specifies the protocol
@@ -64,7 +64,7 @@ sudo iptables -A OUTPUT -d 10.101.151.5 -p icmp --icmp-type echo-reply -j ACCEPT
 sudo iptables -A INPUT -s 10.101.151.5 -p tcp --dport 22 -j ACCEPT
 
 # --sport 22 specifies the source port 
-sudo iptables -A OUTPUT -d 10.101.151.5 -p tcp --sport 22 -j ACCEPT
+# sudo iptables -A OUTPUT -d 10.101.151.5 -p tcp --sport 22 -j ACCEPT
 
 
 # Allow connections from any origin to myCloud server
@@ -72,7 +72,7 @@ sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
 
 
 # Allow ping to machines in the local subnet with mask 255.255.254.0
-sudo iptables -A OUTPUT -p icmp --icmp-type 8 -d 10.101.148.0/22 -j ACCEPT
+sudo iptables -A OUTPUT -p icmp --icmp-type 8 -d 10.101.148.0/23 -j ACCEPT
 
 
 
