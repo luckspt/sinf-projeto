@@ -7,29 +7,23 @@
 sudo iptables -F
 
 
-sudo ipset create allowedMachinesIPs hash:ip
+sudo iptables -A INPUT -s 10.121.52.14 -j ACCEPT
+sudo iptables -A INPUT -s 10.121.52.15 -j ACCEPT
+sudo iptables -A INPUT -s 10.121.52.16 -j ACCEPT
+sudo iptables -A INPUT -s 10.121.72.23 -j ACCEPT
+sudo iptables -A INPUT -s 10.101.85.138 -j ACCEPT
+sudo iptables -A INPUT -s 10.101.85.18 -j ACCEPT
+sudo iptables -A INPUT -s 10.101.148.1 -j ACCEPT
+sudo iptables -A INPUT -s 10.101.85.137 -j ACCEPT
 
-sudo ipset add allowedMachinesIPs 10.121.52.14
-sudo ipset add allowedMachinesIPs 10.121.52.15
-sudo ipset add allowedMachinesIPs 10.121.52.16
-sudo ipset add allowedMachinesIPs 10.121.72.23
-sudo ipset add allowedMachinesIPs 10.101.85.138
-sudo ipset add allowedMachinesIPs 10.101.85.18
-sudo ipset add allowedMachinesIPs 10.101.148.1
-sudo ipset add allowedMachinesIPs 10.101.85.137
-
-sudo iptables -A INPUT -m set --match-set allowedMachinesIPs src -j ACCEPT
-sudo iptables -A OUTPUT -m set --match-set allowedMachinesIPs src -j ACCEPT
-
-
-
-
-# Set default chain policies to DROP for incoming network traffic
-sudo iptables -P INPUT DROP
-# Set default chain policies to DROP for outgoing network traffic originating from the local machine
-sudo iptables -P OUTPUT DROP
-# Set default chain policies to DROP for forwarding traffic
-sudo iptables -P FORWARD DROP
+sudo iptables -A OUTPUT -d 10.121.52.14 -j ACCEPT
+sudo iptables -A OUTPUT -d 10.121.52.15 -j ACCEPT
+sudo iptables -A OUTPUT -d 10.121.52.16 -j ACCEPT
+sudo iptables -A OUTPUT -d 10.121.72.23 -j ACCEPT
+sudo iptables -A OUTPUT -d 10.101.85.138 -j ACCEPT
+sudo iptables -A OUTPUT -d 10.101.85.18 -j ACCEPT
+sudo iptables -A OUTPUT -d 10.101.148.1 -j ACCEPT
+sudo iptables -A OUTPUT -d 10.101.85.137 -j ACCEPT
 
 
 
@@ -83,7 +77,9 @@ sudo iptables -A OUTPUT -p icmp --icmp-type echo-request -d 255.255.254.0/23 -j 
 
 
 
-
-
-# Save the iptables rules
-sudo iptables-save > /etc/iptables/rules.v4
+# Set default chain policies to DROP for incoming network traffic
+sudo iptables -P INPUT DROP
+# Set default chain policies to DROP for outgoing network traffic originating from the local machine
+sudo iptables -P OUTPUT DROP
+# Set default chain policies to DROP for forwarding traffic
+sudo iptables -P FORWARD DROP
