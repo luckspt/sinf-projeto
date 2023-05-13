@@ -77,35 +77,22 @@ public class myCloudServer {
         // Create server socket
         SSLServerSocket sslServerSocket = null;
         try {
-            // Load truststore
-        	// Load server key store
-        	
-            KeyStore serverKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            File keyStoreFile = new File(baseDir, "keystore.jppCloudServer");
-            FileInputStream serverKeyStoreFile = new FileInputStream(keyStoreFile);
-            serverKeyStore.load(serverKeyStoreFile, "password".toCharArray());
-            
-        	
-            
-            // Load server trust store
-            KeyStore serverTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            File trustStoreFile = new File(baseDir, "truststore.jppCloudServer");
-            FileInputStream serverTrustStoreFile = new FileInputStream(trustStoreFile);
-            serverTrustStore.load(serverTrustStoreFile, "password".toCharArray());
+        	KeyStore serverKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        	File keyStoreFile = new File(baseDir, "keystore.jppCloudServer");
+        	FileInputStream serverKeyStoreFile = new FileInputStream(keyStoreFile);
+        	serverKeyStore.load(serverKeyStoreFile, "password".toCharArray());
 
-            // Create key manager and trust manager factories
-            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            keyManagerFactory.init(serverKeyStore, "password".toCharArray());
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init(serverTrustStore);
+        	// Create key manager factory
+        	KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        	keyManagerFactory.init(serverKeyStore, "password".toCharArray());
 
-            // Create SSL context
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
+        	// Create SSL context
+        	SSLContext sslContext = SSLContext.getInstance("TLS");
+        	sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
 
-            // Create SSL server socket
-            SSLServerSocketFactory sslServerSocketFactory = sslContext.getServerSocketFactory();
-            sslServerSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(port);
+        	// Create SSL server socket
+        	SSLServerSocketFactory sslServerSocketFactory = sslContext.getServerSocketFactory();
+        	sslServerSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(port);
             
 
             io.info("Server started on 0.0.0.0:" + port);

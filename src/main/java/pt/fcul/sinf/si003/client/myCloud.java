@@ -658,32 +658,32 @@ public class myCloud {
     }
     
     private static SSLSocketFactory connect(String username) throws Exception {
-    	File keyStoreFile = new File("files/client/" + username + ".jppCloud");
-    	System.out.println(keyStoreFile);
-    	KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    	InputStream keyStoreInputStream = new FileInputStream(keyStoreFile);
-    	keyStore.load(keyStoreInputStream, "password".toCharArray());
-    
-    	KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-    	keyManagerFactory.init(keyStore, "password".toCharArray());
-    
-    	// Load the server truststore
-    	KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    	File trustStoreFile = new File("files/server","truststore.jppCloudServer");
+        File keyStoreFile = new File("files/client/" + username + ".jppCloud");
+        System.out.println(keyStoreFile);
+        KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+        InputStream keyStoreInputStream = new FileInputStream(keyStoreFile);
+        keyStore.load(keyStoreInputStream, "password".toCharArray());
+        
+        // Load the truststore file
+        File trustStoreFile = new File("files/client/" + username + "Trust.jppCloud");
+        KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
         InputStream trustStoreInputStream = new FileInputStream(trustStoreFile);
         trustStore.load(trustStoreInputStream, "password".toCharArray());
 
-        // Create a trust manager factory that uses the server truststore
+
+        // Create a key manager factory that uses the client keystore
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, "password".toCharArray());
+        
         TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
         trustManagerFactory.init(trustStore);
-        
-        // Create an SSL context that uses the client key manager and server trust manager
+
+        // Create an SSL context that uses the client key manager
         SSLContext sslContext = SSLContext.getInstance("TLS");
         sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
-        
+
         SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-        
+
         return sslSocketFactory;
-        
     }
 }
