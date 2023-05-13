@@ -3,20 +3,14 @@ package pt.fcul.sinf.si003.server;
 import pt.fcul.sinf.si003.CloudSocket;
 import pt.fcul.sinf.si003.IO;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.security.KeyStore;
 import java.util.List;
 import java.util.Map;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLServerSocket;
-import javax.net.ssl.SSLServerSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.*;
 
 /**
  * The server.
@@ -59,8 +53,8 @@ public class myCloudServer {
         }
 
         // EXTRA: base directory
-        if (arguments.containsKey("d"))
-            baseDir = arguments.get("d").get(0);
+        if (arguments.containsKey("b"))
+            baseDir = arguments.get("b").get(0);
 
         // EXTRA: chunk size
         int chunkSize = 1024;
@@ -75,38 +69,14 @@ public class myCloudServer {
         }
 
         // Create server socket
-        SSLServerSocket sslServerSocket = null;
+        ServerSocket serverSocket = null;
         try {
-            // Load truststore
-        	// Load server key store
-        	
-            KeyStore serverKeyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            File keyStoreFile = new File(baseDir, "keystore.jppCloudServer");
-            FileInputStream serverKeyStoreFile = new FileInputStream(keyStoreFile);
-            serverKeyStore.load(serverKeyStoreFile, "password".toCharArray());
-            
-        	
-            
-            // Load server trust store
-            KeyStore serverTrustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            File trustStoreFile = new File(baseDir, "truststore.jppCloudServer");
-            FileInputStream serverTrustStoreFile = new FileInputStream(trustStoreFile);
-            serverTrustStore.load(serverTrustStoreFile, "password".toCharArray());
-
-            // Create key manager and trust manager factories
-            KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            keyManagerFactory.init(serverKeyStore, "password".toCharArray());
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init(serverTrustStore);
-
-            // Create SSL context
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
-
             // Create SSL server socket
-            SSLServerSocketFactory sslServerSocketFactory = sslContext.getServerSocketFactory();
-            sslServerSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(port);
-            
+            System.setProperty("javax.net.ssl.keyStore", baseDir + "/keystore.server");
+            System.setProperty("javax.net.ssl.keyStorePassword", "123456");
+
+            ServerSocketFactory serverSocketFactory = SSLServerSocketFactory.getDefault();
+            serverSocket = serverSocketFactory.createServerSocket(port);
 
             io.info("Server started on 0.0.0.0:" + port);
         } catch (Exception e) {
@@ -117,7 +87,7 @@ public class myCloudServer {
         	try {
                 // Wait for connection
                 io.info("Waiting for connections...");
-                Socket clientSocket = sslServerSocket.accept();
+                Socket clientSocket = serverSocket.accept();
                 io.success("Connection established with " + clientSocket.getInetAddress().getHostAddress() + ":" + clientSocket.getPort());
 
                 // Create a new thread for the connection

@@ -5,13 +5,11 @@ import pt.fcul.sinf.si003.*;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.SocketFactory;
+import javax.net.ssl.*;
 
 import java.io.*;
+import java.net.Socket;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -116,7 +114,14 @@ public class myCloud {
         String[] serverAddressSplit = serverAddress.split(":");
         try {
             io.info("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
-            cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]), chunkSize);
+
+            System.setProperty("javax.net.ssl.trustStore", baseDir + "/truststore.client");
+            System.setProperty("javax.net.ssl.trustStorePassword", "123456");
+
+            SocketFactory socketFactory = SSLSocketFactory.getDefault();
+            Socket socket = socketFactory.createSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
+
+            cloudSocket = new CloudSocket(socket, chunkSize);
             io.success("Connected to server " + cloudSocket.getRemoteAddress());
         } catch (IOException e) {
             io.errorAndExit("Could not connect to server: " + e.getMessage());
@@ -131,20 +136,6 @@ public class myCloud {
             String username = arguments.get("au").get(0);
             String password = arguments.get("au").get(1);
             String certificatePath = arguments.get("au").get(2);
-            try {
-            	SSLSocketFactory sslSocketFactory = connect(username);
-            	
-	            io.info("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
-	            SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
-	            sslSocket.startHandshake();
-	            cloudSocket = new CloudSocket(sslSocket, chunkSize);
-	            
-	            io.success("Connected to server " + sslSocket.getRemoteSocketAddress());
-
-            }catch (Exception e) {
-                    io.errorAndExit("Could not connect to server: " + e.getMessage());
-                }
-
             registerUser(username, password, certificatePath);
             return;
         } else {
@@ -156,27 +147,7 @@ public class myCloud {
             } else {
                 String username = arguments.get("u").get(0);
                 String password = arguments.get("p").get(0);
-                
-                try {
-                    // create socket
-                    SSLSocketFactory sslSocketFactory = connect(username);
-                    SSLSocket sslSocket = (SSLSocket) sslSocketFactory.createSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
-                    sslSocket.startHandshake();
-                    // create cloud socket and set destination username
-                    cloudSocket = new CloudSocket(sslSocket, chunkSize);
-                    // authenticate user
-                    if (!authenticateUser(username, password)) {
-                        io.errorAndExit("Username or password is incorrect");
-                    }
-                    
-                    
-                    destination_username = username;
-                    System.out.println(destination_username);
-                    io.success("Connected to server " + sslSocket.getRemoteSocketAddress());
 
-                } catch (Exception e) {
-                    io.errorAndExit("Could not connect to server: " + e.getMessage());
-                }
                 if (!authenticateUser(username, password)) {
                     io.errorAndExit("Username or password is incorrect");
                 }
@@ -655,35 +626,5 @@ public class myCloud {
         io.success(certificateFile.getName() + " sent to server!");
 
         return registered;
-    }
-    
-    private static SSLSocketFactory connect(String username) throws Exception {
-    	File keyStoreFile = new File("files/client/" + username + ".jppCloud");
-    	System.out.println(keyStoreFile);
-    	KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    	InputStream keyStoreInputStream = new FileInputStream(keyStoreFile);
-    	keyStore.load(keyStoreInputStream, "password".toCharArray());
-    
-    	KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-    	keyManagerFactory.init(keyStore, "password".toCharArray());
-    
-    	// Load the server truststore
-    	KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-    	File trustStoreFile = new File("files/server","truststore.jppCloudServer");
-        InputStream trustStoreInputStream = new FileInputStream(trustStoreFile);
-        trustStore.load(trustStoreInputStream, "password".toCharArray());
-
-        // Create a trust manager factory that uses the server truststore
-        TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-        trustManagerFactory.init(trustStore);
-        
-        // Create an SSL context that uses the client key manager and server trust manager
-        SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(keyManagerFactory.getKeyManagers(), trustManagerFactory.getTrustManagers(), null);
-        
-        SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-        
-        return sslSocketFactory;
-        
     }
 }

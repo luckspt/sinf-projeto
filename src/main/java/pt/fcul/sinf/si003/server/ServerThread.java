@@ -123,7 +123,7 @@ public class ServerThread extends Thread {
                     }
 
                     try {
-                        File cerFilename = new File(CERTS_DIR + commandParts[1] + ".cer");
+                        File cerFilename = new File(myCloudServer.getBaseDir(), CERTS_DIR + commandParts[1] + ".cer");
                         cloudSocket.sendBool(cerFilename.exists());
                         if(cerFilename.exists())
                             downloadFile(cerFilename);
