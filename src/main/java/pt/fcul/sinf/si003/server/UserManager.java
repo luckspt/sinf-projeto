@@ -8,8 +8,6 @@ import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * User manager
@@ -57,7 +55,7 @@ public class UserManager {
      * Read the file and look for a user if it is not cached
      * @param username The username to look for
      */
-    public ServerUser getUser(String username) {
+    public User getUser(String username) {
         if (!isMacValid())
             new IO().errorAndExit("FATAL: Invalid MAC, users file has been tampered with.");
 
@@ -71,10 +69,10 @@ public class UserManager {
             // Read file line by line until EOF
             String line;
             while ((line = bufferedReader.readLine()) != null) {
-                ServerUser serverUser = ServerUser.fromString(line);
+                User user = User.fromString(line);
 
-                if (serverUser.getUsername().equals(username)) {
-                    return serverUser;
+                if (user.getUsername().equals(username)) {
+                    return user;
                 }
             }
 
@@ -99,12 +97,12 @@ public class UserManager {
             new IO().errorAndExit("FATAL: Invalid MAC, users file has been tampered with.");
 
         // Create user and add to list
-        ServerUser serverUser = new ServerUser(username, password);
+        User user = new User(username, password);
 
         // Append to file
         FileWriter fileWriter = new FileWriter(this.file, true);
         BufferedWriter bufferedWriter = new BufferedWriter(fileWriter);
-        bufferedWriter.write(serverUser.toString());
+        bufferedWriter.write(user.toString());
         bufferedWriter.newLine();
         bufferedWriter.close();
         fileWriter.close();

@@ -5,13 +5,9 @@ import pt.fcul.sinf.si003.IO;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Base64;
-import java.util.Scanner;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -257,7 +253,7 @@ public class ServerThread extends Thread {
 
     private boolean login(String username, String password) {
         // Validate that the user exists
-        ServerUser user = this.userManager.getUser(username);
+        User user = this.userManager.getUser(username);
         if (user == null) {
             return false;
         }
