@@ -51,7 +51,7 @@ public class ClientKeyStore {
             
         } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException e) {
         	if (e.getCause() instanceof UnrecoverableKeyException) {
-               new IO().errorAndExit("palavra passe da keystore incorreta"); 
+               new IO().errorAndExit("Keystore password is incorrect");
             }
             // this never happens
         } finally {
