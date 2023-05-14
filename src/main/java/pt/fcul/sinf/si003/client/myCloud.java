@@ -415,7 +415,7 @@ public class myCloud {
      * @param file The file
      * @throws CertificateException
      */
-    private static boolean verifyFile(String username, File file) throws IOException, KeyStoreException, NoSuchAlgorithmException, InvalidKeyException, CertificateException {
+    private static boolean verifyFile(String username, File file) throws IOException, NoSuchAlgorithmException, InvalidKeyException, CertificateException {
         // Download the signature
         io.info("Downloading signature of " + file.getName() + " ...");
         File signatureFile = new File(getBaseDir(), file.getName() + FileExtensions.ASSINATURA.getExtensionWithDot());
@@ -439,7 +439,7 @@ public class myCloud {
             }
             cloudSocket.receiveStream(outputStream);
             outputStream.close();
-            io.success("Cerficate for " + username + " downloaded!");
+            io.success("Certificate for " + username + " downloaded!");
         }
         // convert certificate file to type Certificate
         CertificateFactory fac = CertificateFactory.getInstance("X509");
@@ -472,7 +472,7 @@ public class myCloud {
      * @param file              The file to encrypt
      * @param cipheredExtension The ciphered file extension
      */
-    private static void hybridEncryption(String username, File file, FileExtensions cipheredExtension) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, KeyStoreException, IllegalBlockSizeException {
+    private static void hybridEncryption(String username, File file, FileExtensions cipheredExtension) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, CertificateException {
         String cipheredFileName = file.getName() + cipheredExtension.getExtensionWithDot();
 
         // Create the streams
@@ -508,8 +508,30 @@ public class myCloud {
         encryptedFileInputStream.close();
         encryptedFile.delete();
 
-        // Get the public key from the keystore
-        Certificate certificate = clientKeyStore.getAliasCertificate();
+        // Get the certificate from the received user
+        // Obtain certificate
+        File certificateFile = new File(getBaseDir(), username + FileExtensions.CERTIFICADO.getExtensionWithDot());
+        io.info("Obtain certificate " + certificateFile + " ...");
+        if(!certificateFile.exists()) {
+            // certificate file does not exist; request server
+            FileOutputStream outputStream = new FileOutputStream(certificateFile);
+            io.info("Get certificate file " + certificateFile.getName() + "...");
+            cloudSocket.sendString("get-certificate " + username);
+            if (!cloudSocket.receiveBool()) {
+                throw new IOException("Certificate " + certificateFile.getName() + " does not exist in the server");
+            }
+            cloudSocket.receiveStream(outputStream);
+            outputStream.close();
+            io.success("Certificate for " + username + " downloaded!");
+        }
+
+        // convert certificate file to type Certificate
+        CertificateFactory fac = CertificateFactory.getInstance("X509");
+        FileInputStream certificateInputStream = new FileInputStream(certificateFile);
+        X509Certificate certificate = (X509Certificate) fac.generateCertificate(certificateInputStream);
+        io.success("Certificate obtained!");
+
+        // Get the public key from the certificate
         PublicKey publicKey = certificate.getPublicKey();
 
         // Wrap the symmetric key with the public key
