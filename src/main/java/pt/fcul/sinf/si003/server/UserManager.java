@@ -17,7 +17,6 @@ import java.util.Map;
 public class UserManager {
     private final File file;
     private final File macFile;
-    private final Map<String, ServerUser> cachedUsers = new HashMap<>();
     private final String macPassword;
 
     /**
@@ -59,9 +58,6 @@ public class UserManager {
      * @param username The username to look for
      */
     public ServerUser getUser(String username) {
-        if (this.cachedUsers.containsKey(username))
-            return this.cachedUsers.get(username);
-
         if (!isMacValid())
             new IO().errorAndExit("FATAL: Invalid MAC, users file has been tampered with.");
 
@@ -78,7 +74,6 @@ public class UserManager {
                 ServerUser serverUser = ServerUser.fromString(line);
 
                 if (serverUser.getUsername().equals(username)) {
-                    this.cachedUsers.put(username, serverUser);
                     return serverUser;
                 }
             }
@@ -113,9 +108,6 @@ public class UserManager {
         bufferedWriter.newLine();
         bufferedWriter.close();
         fileWriter.close();
-
-        // Invalidate cache
-        this.cachedUsers.clear();
 
         // Compute and save MAC
         saveMac(calculateMac());
