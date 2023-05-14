@@ -242,13 +242,7 @@ public class ServerThread extends Thread {
         if (!canSignup) {
             return;
         }
-        
-        try {
-			verifyMac();
-		} catch (InvalidKeyException | NoSuchAlgorithmException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
         // Add the user
         this.userManager.setUser(username, password);
 
@@ -276,95 +270,6 @@ public class ServerThread extends Thread {
 
         return true;
     }
-    
-    private static void verifyMac() throws IOException, InvalidKeyException, NoSuchAlgorithmException {
-    	File passwordFile = new File("files/server","users.txt");
-        if (passwordFile.exists()) {
-        	System.out.println("Entraste na função");
-        	
-            String mensagem = new String(Files.readAllBytes(Paths.get("files/server","users.txt")),StandardCharsets.UTF_8);
-            File macFile = new File("files/server","mac.txt");
-        	
-            byte[] hmac = null;
-            byte[] originalMac = null;
-            String savedOriginalPass = null;
-			if (macFile.exists()) {
-				System.out.print("Digite a senha MAC: ");
-	            Scanner scan = new Scanner(System.in);
-	            String macPass = scan.nextLine();
-			    System.out.println("Arquivo de MAC existe.");
-			    try {
-			        String userpassContent = new String(Files.readAllBytes(Paths.get("files/server","users.txt")),StandardCharsets.UTF_8);
-			        hmac = calculateHmac(userpassContent, macPass);
-			        
-			        
-					try (Scanner scanner = new Scanner(new File("files/server","originalPass.txt"))) {
-					    savedOriginalPass = scanner.nextLine();
-					    
-					}
-					try (Scanner scanner = new Scanner(new File("files/server","mac.txt"))) {
-						String macFromFile = scanner.nextLine();
-			            originalMac = Base64.getDecoder().decode(macFromFile);
-					    
-					}
-					originalMac = calculateHmac(userpassContent,savedOriginalPass);
-					
-			        PrintWriter macWriter = new PrintWriter(macFile);
-			        macWriter.println(Base64.getEncoder().encodeToString(originalMac));
-			        macWriter.close();
-			    } catch (IOException e) {
-			        e.printStackTrace();
-			    }
-			    if (Arrays.equals(hmac, originalMac)) {
-				    System.out.println("Os MACs são iguais.");
-				} else {
-				    System.out.println("Os MACs são diferentes.");
-				    System.exit(1);
-				}
-	            
-			    
-			} else {
-				System.out.print("Digite a senha MAC: ");
-	            Scanner scan = new Scanner(System.in);
-	            String originalPass = scan.nextLine();
-	            try (FileWriter writer = new FileWriter("files/server/"+"originalPass.txt")) {
-	                writer.write(originalPass);
-	            }
-			    System.out.println("Arquivo de MAC não existe.");
-			    hmac = calculateHmac(mensagem, originalPass);
-			    // Write the MAC to the "mac.txt" file
-			    try (PrintWriter macWriter = new PrintWriter(macFile)) {
-			        macWriter.println(Base64.getEncoder().encodeToString(hmac));
-			        System.out.println("MAC salvo no arquivo.");
-			    } catch (IOException e) {
-			        System.out.println("Erro ao salvar MAC no arquivo: " + e.getMessage());
-			        System.exit(1);
-			    }
-			    if (Arrays.equals(hmac, calculateHmac(mensagem,originalPass))) {
-				    System.out.println("Os MACs são iguais.");
-				} else {
-				    System.out.println("Os MACs são diferentes.");
-				    System.exit(1);
-				}
-	            
-			}
-			
-			
-        }else {
-            System.out.println("Arquivo de senhas não encontrado.");
-
-            // Cria o arquivo "userpass.txt"
-            try {
-                File userpassFile = new File("files/server","users.txt");
-                if (userpassFile.createNewFile()) {
-                    System.out.println("Arquivo de senhas criado.");
-                }
-            } catch (IOException e) {
-                System.out.println("Erro ao criar o arquivo de senhas: " + e.getMessage());
-                System.exit(1);
-            }
-        }
-	}
     
     public static byte[] calculateHmac(String message, String key) throws NoSuchAlgorithmException, InvalidKeyException {
         byte[] byteKey = key.getBytes(StandardCharsets.UTF_8);

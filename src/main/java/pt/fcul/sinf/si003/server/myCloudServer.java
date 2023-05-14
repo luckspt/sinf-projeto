@@ -8,6 +8,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 
 import javax.net.ServerSocketFactory;
 import javax.net.ssl.*;
@@ -63,7 +64,15 @@ public class myCloudServer {
 
         // User manager
         try {
-            userManager = new UserManager(baseDir, "users.txt");
+            // Ask for password
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("Insert users.txt integrity password: ");
+            String macPassword = scanner.nextLine();
+
+            if (macPassword.isEmpty())
+                io.errorAndExit("users.txt integrity password invalid");
+
+            userManager = new UserManager(baseDir, "users.txt", macPassword);
         } catch (IOException e) {
             io.errorAndExit("Could not read password file: " + e.getMessage());
         }
