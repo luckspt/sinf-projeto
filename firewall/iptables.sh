@@ -25,21 +25,16 @@ sudo iptables -A OUTPUT -d 10.101.85.18 -j ACCEPT
 sudo iptables -A OUTPUT -d 10.101.148.1 -j ACCEPT
 sudo iptables -A OUTPUT -d 10.101.85.137 -j ACCEPT
 
-
-
 # The packets that are allowed are specified below
 # -j flag stands for "jump" and specifies the target of the rule
 
-
-# Allow loopback device traffic 
+# Allow loopback device traffic
 #################################
 # loopback (lo) interface is virtual network interface that allows communication within the local machine itself
 # Accept traffic incoming (-i) on the loopback (lo) interface
 sudo iptables -A INPUT -i lo -j ACCEPT
 # Accept traffic outgoing (-o) on the loopback (lo) interface ??
 sudo iptables -A OUTPUT -o lo -j ACCEPT
-
-
 
 # Allow established and related connections
 ############################################
@@ -63,18 +58,14 @@ sudo iptables -A INPUT -s 10.101.151.5 -p icmp --icmp-type 8 -j ACCEPT
 # --dport 22 specifies the destination port
 sudo iptables -A INPUT -s 10.101.151.5 -p tcp --dport 22 -j ACCEPT
 
-# --sport 22 specifies the source port 
+# --sport 22 specifies the source port
 # sudo iptables -A OUTPUT -d 10.101.151.5 -p tcp --sport 22 -j ACCEPT
-
 
 # Allow connections from any origin to myCloud server
 sudo iptables -A INPUT -p tcp --dport 3000 -j ACCEPT
 
-
 # Allow ping to machines in the local subnet with mask 255.255.254.0
 sudo iptables -A OUTPUT -p icmp --icmp-type 8 -d 10.101.148.0/23 -j ACCEPT
-
-
 
 # Set default chain policies to DROP for incoming network traffic
 sudo iptables -A INPUT -j DROP
