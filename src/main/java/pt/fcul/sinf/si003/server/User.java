@@ -2,18 +2,18 @@ package pt.fcul.sinf.si003.server;
 
 import java.util.Base64;
 
-public class ServerUser {
+public class User {
     private static final String SEPARATOR = ";";
     private final String username;
     private byte[] hashedPassword;
     private byte[] salt;
 
-    public ServerUser(String username, String password) {
+    public User(String username, String password) {
         this.username = username;
         this.hashPassword(password);
     }
 
-    public ServerUser(String username, String hashedPassword, String salt) {
+    public User(String username, String hashedPassword, String salt) {
         this.username = username;
 
         this.setHashedPassword(Base64.getDecoder().decode(hashedPassword.getBytes()));
@@ -73,9 +73,9 @@ public class ServerUser {
         return this.username + SEPARATOR + this.getHashedPasswordString() + SEPARATOR + this.getSaltString();
     }
 
-    public static ServerUser fromString(String userString) {
+    public static User fromString(String userString) {
         String[] userArray = userString.split(SEPARATOR);
 
-        return new ServerUser(userArray[0], userArray[1], userArray[2]);
+        return new User(userArray[0], userArray[1], userArray[2]);
     }
 }
