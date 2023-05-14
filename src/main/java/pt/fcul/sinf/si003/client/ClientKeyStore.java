@@ -47,7 +47,12 @@ public class ClientKeyStore {
             FileInputStream fileInputStream = new FileInputStream(file);
             keyStore = KeyStore.getInstance("PKCS12");
             keyStore.load(fileInputStream, keystorePassword.toCharArray());
+            
+            
         } catch (KeyStoreException | IOException | NoSuchAlgorithmException | CertificateException e) {
+        	if (e.getCause() instanceof UnrecoverableKeyException) {
+               new IO().errorAndExit("palavra passe da keystore incorreta"); 
+            }
             // this never happens
         } finally {
             this.keyStore = keyStore;
@@ -92,4 +97,8 @@ public class ClientKeyStore {
     public Certificate getAliasCertificate() throws KeyStoreException {
         return this.getCertificate(this.alias);
     }
+    
+  
 }
+
+

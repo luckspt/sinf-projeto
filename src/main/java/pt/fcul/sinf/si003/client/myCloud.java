@@ -155,7 +155,14 @@ public class myCloud {
                 String keyStoreAlias = arguments.get("-keyStoreAlias") != null ? arguments.get("-keyStoreAlias").get(0) : username;
                 String keyStorePassword = arguments.get("-keyStorePassword") != null ? arguments.get("-keyStorePassword").get(0) : password;
                 String keyStoreAliasPassword = arguments.get("-keyStoreAliasPassword") != null ? arguments.get("-keyStoreAliasPassword").get(0) : password;
+                System.out.println("criou");
                 clientKeyStore = new ClientKeyStore(getBaseDir(), keyStoreAlias, keyStorePassword, keyStoreAliasPassword);
+                try {
+					System.out.println(clientKeyStore.getAliasKey());
+				} catch (UnrecoverableKeyException | KeyStoreException | NoSuchAlgorithmException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
                 destination_username = username;
             }
         }
@@ -202,6 +209,7 @@ public class myCloud {
                     case "c":
                         // Hybrid encryption
                         io.info("Performing hybrid encryption on file " + fileName + "...");
+                        System.out.println("olá");
                         hybridEncryption(destination_username, file, FileExtensions.CIFRADO);
                         io.success("Hybrid encrypted file " + fileName);
                         break;
@@ -511,6 +519,7 @@ public class myCloud {
 
         // Get the public key from the keystore
         Certificate certificate = clientKeyStore.getAliasCertificate();
+        System.out.println(certificate);
         PublicKey publicKey = certificate.getPublicKey();
 
         // Wrap the symmetric key with the public key

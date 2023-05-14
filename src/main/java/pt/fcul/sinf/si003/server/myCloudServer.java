@@ -81,14 +81,7 @@ public class myCloudServer {
         // Create server socket
         ServerSocket serverSocket = null;
         try {
-            // Create SSL server socket
-            System.setProperty("javax.net.ssl.keyStore", baseDir + "/server.keystore");
-            System.setProperty("javax.net.ssl.keyStorePassword", "123456");
 
-            ServerSocketFactory serverSocketFactory = SSLServerSocketFactory.getDefault();
-            serverSocket = serverSocketFactory.createServerSocket(port);
-
-            io.info("Server started on 0.0.0.0:" + port);
         } catch (Exception e) {
             io.errorAndExit("Could not start SSL server socket: " + e.getMessage());
         }
