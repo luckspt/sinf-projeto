@@ -172,9 +172,17 @@ public class myCloud {
 
             // Validate file existence locally, only if it's not a download
             File file = new File(getBaseDir(), fileName);
-            if ((!method.equals("g") && !method.equals("x")) && !file.exists()) {
-                io.error("File " + fileName + " does not exist locally.");
-                continue;
+            System.out.println(file.getAbsolutePath() + " " + file.exists() + " " + method);
+            if (!file.exists()) {
+                if (!method.equals("x") && !method.equals("g")) {
+                    io.error("File " + fileName + " does not exist locally.");
+                    continue;
+                }
+            } else {
+                if (method.equals("g")) {
+                    io.error("File " + fileName + " already exists locally.");
+                    continue;
+                }
             }
 
             // and on the server
