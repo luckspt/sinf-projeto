@@ -68,6 +68,7 @@ public class myCloudServer {
             Scanner scanner = new Scanner(System.in);
             System.out.print("Insert users.txt integrity password: ");
             String macPassword = scanner.nextLine();
+            scanner.close();
 
             if (macPassword.isEmpty())
                 io.errorAndExit("users.txt integrity password invalid");
@@ -81,7 +82,8 @@ public class myCloudServer {
         ServerSocket serverSocket = null;
         try {
             // Create SSL server socket
-            System.setProperty("javax.net.ssl.keyStore", baseDir + "/keystore.server");
+            System.setProperty("javax.net.ssl.keyStore", baseDir + "server.keystore");
+            System.out.println(System.getProperty("javax.net.ssl.keyStore"));
             System.setProperty("javax.net.ssl.keyStorePassword", "123456");
 
             ServerSocketFactory serverSocketFactory = SSLServerSocketFactory.getDefault();

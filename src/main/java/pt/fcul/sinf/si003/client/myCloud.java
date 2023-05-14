@@ -115,7 +115,7 @@ public class myCloud {
         try {
             io.info("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
 
-            System.setProperty("javax.net.ssl.trustStore", baseDir + "/truststore.client");
+            System.setProperty("javax.net.ssl.trustStore", baseDir + "/server.truststore");
             System.setProperty("javax.net.ssl.trustStorePassword", "123456");
 
             SocketFactory socketFactory = SSLSocketFactory.getDefault();
