@@ -5,7 +5,11 @@ import pt.fcul.sinf.si003.*;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.net.SocketFactory;
+import javax.net.ssl.*;
+
 import java.io.*;
+import java.net.Socket;
 import java.security.*;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
@@ -110,7 +114,14 @@ public class myCloud {
         String[] serverAddressSplit = serverAddress.split(":");
         try {
             io.info("Connecting to server " + serverAddressSplit[0] + ":" + serverAddressSplit[1] + "...");
-            cloudSocket = new CloudSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]), chunkSize);
+
+            System.setProperty("javax.net.ssl.trustStore", baseDir + "/server.truststore");
+            System.setProperty("javax.net.ssl.trustStorePassword", "123456");
+
+            SocketFactory socketFactory = SSLSocketFactory.getDefault();
+            Socket socket = socketFactory.createSocket(serverAddressSplit[0], Integer.parseInt(serverAddressSplit[1]));
+
+            cloudSocket = new CloudSocket(socket, chunkSize);
             io.success("Connected to server " + cloudSocket.getRemoteAddress());
         } catch (IOException e) {
             io.errorAndExit("Could not connect to server: " + e.getMessage());
@@ -125,7 +136,6 @@ public class myCloud {
             String username = arguments.get("au").get(0);
             String password = arguments.get("au").get(1);
             String certificatePath = arguments.get("au").get(2);
-
             registerUser(username, password, certificatePath);
             return;
         } else {

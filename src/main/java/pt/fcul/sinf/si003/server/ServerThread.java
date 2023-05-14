@@ -4,7 +4,17 @@ import pt.fcul.sinf.si003.CloudSocket;
 import pt.fcul.sinf.si003.IO;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.Scanner;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * The server thread.
@@ -113,7 +123,7 @@ public class ServerThread extends Thread {
                     }
 
                     try {
-                        File cerFilename = new File(CERTS_DIR + commandParts[1] + ".cer");
+                        File cerFilename = new File(myCloudServer.getBaseDir(), CERTS_DIR + commandParts[1] + ".cer");
                         cloudSocket.sendBool(cerFilename.exists());
                         if(cerFilename.exists())
                             downloadFile(cerFilename);
@@ -259,5 +269,15 @@ public class ServerThread extends Thread {
         }
 
         return true;
+    }
+    
+    public static byte[] calculateHmac(String message, String key) throws NoSuchAlgorithmException, InvalidKeyException {
+        byte[] byteKey = key.getBytes(StandardCharsets.UTF_8);
+        SecretKeySpec keySpec = new SecretKeySpec(byteKey, "HmacSHA256");
+        Mac mac = Mac.getInstance("HmacSHA256");
+        mac.init(keySpec);
+        byte[] byteMessage = message.getBytes(StandardCharsets.UTF_8);
+        byte[] macBytes = mac.doFinal(byteMessage);
+        return macBytes;
     }
 }

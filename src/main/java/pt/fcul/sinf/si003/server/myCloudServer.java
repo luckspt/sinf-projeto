@@ -8,6 +8,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
+
+import javax.net.ServerSocketFactory;
+import javax.net.ssl.*;
 
 /**
  * The server.
@@ -50,8 +54,8 @@ public class myCloudServer {
         }
 
         // EXTRA: base directory
-        if (arguments.containsKey("d"))
-            baseDir = arguments.get("d").get(0);
+        if (arguments.containsKey("b"))
+            baseDir = arguments.get("b").get(0);
 
         // EXTRA: chunk size
         int chunkSize = 1024;
@@ -60,7 +64,16 @@ public class myCloudServer {
 
         // User manager
         try {
-            userManager = new UserManager(baseDir, "users.txt");
+            // Ask for password
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("Insert users.txt integrity password: ");
+            String macPassword = scanner.nextLine();
+            scanner.close();
+
+            if (macPassword.isEmpty())
+                io.errorAndExit("users.txt integrity password invalid");
+
+            userManager = new UserManager(baseDir, "users.txt", macPassword);
         } catch (IOException e) {
             io.errorAndExit("Could not read password file: " + e.getMessage());
         }
@@ -68,14 +81,20 @@ public class myCloudServer {
         // Create server socket
         ServerSocket serverSocket = null;
         try {
-            serverSocket = new ServerSocket(port);
+            // Create SSL server socket
+            System.setProperty("javax.net.ssl.keyStore", baseDir + "/server.keystore");
+            System.setProperty("javax.net.ssl.keyStorePassword", "123456");
+
+            ServerSocketFactory serverSocketFactory = SSLServerSocketFactory.getDefault();
+            serverSocket = serverSocketFactory.createServerSocket(port);
+
             io.info("Server started on 0.0.0.0:" + port);
-        } catch (IOException e) {
-            io.errorAndExit("Could not start server socket: " + e.getMessage());
+        } catch (Exception e) {
+            io.errorAndExit("Could not start SSL server socket: " + e.getMessage());
         }
 
         while (true) {
-            try {
+        	try {
                 // Wait for connection
                 io.info("Waiting for connections...");
                 Socket clientSocket = serverSocket.accept();
