@@ -82,7 +82,7 @@ public class myCloudServer {
         ServerSocket serverSocket = null;
         try {
             // Create SSL server socket
-            System.setProperty("javax.net.ssl.keyStore", baseDir + "server.keystore");
+            System.setProperty("javax.net.ssl.keyStore", baseDir + "/server.keystore");
             System.out.println(System.getProperty("javax.net.ssl.keyStore"));
             System.setProperty("javax.net.ssl.keyStorePassword", "123456");
 
