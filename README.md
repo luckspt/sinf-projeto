@@ -24,19 +24,26 @@ Para executar o servidor, basta executar o _shell script_ `myCloudServer.sh` na 
 
 O servidor recebe os seguintes argumentos, sem ordem:
 - `-p {porta}` (default: `3000`) - Porta do servidor
-- `-d {diretoria}` (default: `./`) - Diretoria base dos ficheiros do servidor
+- `-b {diretoria base}` (default: `./`) - Diretoria base dos ficheiros do servidor
 - `--chunkSize {tamanho}` (default: `1024`) - Tamanho do _buffer_ de leitura/escrita de *streams*
 
 ### Cliente
 Para executar o cliente, basta executar o _shell script_ `myCloud.sh` na raiz do projeto.
 
+Criar um utilizador:
+- `-au {username} {password} {certificado}` - Registar utilizador para aceder ao sistema myCloud
+
+Autenticar um utilizador 
+- `-u {username} -p {password}` - Adicionar username e password de um user para aceder ao sistema myCloud
+
 O cliente recebe os seguintes argumentos, sem ordem:
 - `-a {endereco}` (default: `localhost:3000`) - Endereço e porta do servidor
-- `-d {caminho}` (default: `./`) - Diretoria base do cliente
+- `-b {caminho}` (default: `./`) - Diretoria base do cliente
 - `--keyStoreAlias {alias}` (default: `jpp`) - Nome do *alias* a usar para o _keystore_
 - `--keyStorePassword {password}` (default: `123456`) - *Password* do _keystore_
 - `--keyStoreAliasPassword {password}` (default: `123456`) - *Password* da _key_ *alias* do _keystore_
 - `--chunkSize {tamanho}` (default: `1024`) - Tamanho do _buffer_ de leitura/escrita de *streams*
+- `-d {utilizador}` (default: `São enviados para o própriio utilizador` ) - Utilizador para o qual se enviam os ficheiros
 
 Para além destes, deve receber um e apenas um dos seguintes argumentos:
 - `-c {ficheiros}+` - Cifra os ficheiros (cifra híbrida) e envia-os para o servidor.
